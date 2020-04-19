@@ -4,3 +4,6 @@
 [submodule "firmware/uGFX"]
 	path = firmware/uGFX
 	url = https://github.com/philcrump/uGFX.git
+[submodule "pcb/lib/agg-kicad"]
+	path = pcb/lib/agg-kicad
+	url = https://github.com/philcrump/agg-kicad.git

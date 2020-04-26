@@ -83,24 +83,24 @@
 //#define GDISP_NEED_TIMERFLUSH                        GFXOFF
 //#define GDISP_NEED_VALIDATION                        GFXON
 //#define GDISP_NEED_CLIP                              GFXON
-//#define GDISP_NEED_CIRCLE                            GFXOFF
+#define GDISP_NEED_CIRCLE                            GFXON
 //#define GDISP_NEED_DUALCIRCLE                        GFXOFF
 //#define GDISP_NEED_ELLIPSE                           GFXOFF
-//#define GDISP_NEED_ARC                               GFXOFF
+#define GDISP_NEED_ARC                               GFXON
 //#define GDISP_NEED_ARCSECTORS                        GFXOFF
-//#define GDISP_NEED_CONVEX_POLYGON                    GFXOFF
+#define GDISP_NEED_CONVEX_POLYGON                    GFXON
 //#define GDISP_NEED_SCROLL                            GFXOFF
 //#define GDISP_NEED_PIXELREAD                         GFXOFF
 #define GDISP_NEED_CONTROL                           GFXON
 //#define GDISP_NEED_QUERY                             GFXOFF
-//#define GDISP_NEED_MULTITHREAD                       GFXOFF
+#define GDISP_NEED_MULTITHREAD                       GFXON
 //#define GDISP_NEED_STREAMING                         GFXOFF
 #define GDISP_NEED_TEXT                              GFXON
 //    #define GDISP_NEED_TEXT_WORDWRAP                 GFXOFF
 //    #define GDISP_NEED_TEXT_BOXPADLR                 1
 //    #define GDISP_NEED_TEXT_BOXPADTB                 1
 //    #define GDISP_NEED_ANTIALIAS                     GFXOFF
-//    #define GDISP_NEED_UTF8                          GFXOFF
+    #define GDISP_NEED_UTF8                          GFXON
 //    #define GDISP_NEED_TEXT_KERNING                  GFXOFF
 //    #define GDISP_INCLUDE_FONT_UI1                   GFXOFF
     #define GDISP_INCLUDE_FONT_UI2                   GFXON       // The smallest preferred font.
@@ -108,9 +108,9 @@
 //    #define GDISP_INCLUDE_FONT_DEJAVUSANS10          GFXOFF
 //    #define GDISP_INCLUDE_FONT_DEJAVUSANS12          GFXOFF
 //    #define GDISP_INCLUDE_FONT_DEJAVUSANS16          GFXOFF
-//    #define GDISP_INCLUDE_FONT_DEJAVUSANS20          GFXOFF
+    #define GDISP_INCLUDE_FONT_DEJAVUSANS20          GFXON
 //    #define GDISP_INCLUDE_FONT_DEJAVUSANS24          GFXOFF
-//    #define GDISP_INCLUDE_FONT_DEJAVUSANS32          GFXOFF
+    #define GDISP_INCLUDE_FONT_DEJAVUSANS32          GFXON
 //    #define GDISP_INCLUDE_FONT_DEJAVUSANSBOLD12      GFXOFF
 //    #define GDISP_INCLUDE_FONT_FIXED_10X20           GFXOFF
 //    #define GDISP_INCLUDE_FONT_FIXED_7X14            GFXOFF
@@ -198,29 +198,29 @@
 ///////////////////////////////////////////////////////////////////////////
 // GWIN                                                                  //
 ///////////////////////////////////////////////////////////////////////////
-//#define GFX_USE_GWIN                                 GFXOFF
+#define GFX_USE_GWIN                                 GFXON
 
-//#define GWIN_NEED_WINDOWMANAGER                      GFXOFF
+#define GWIN_NEED_WINDOWMANAGER                      GFXON
 //    #define GWIN_REDRAW_IMMEDIATE                    GFXOFF
 //    #define GWIN_REDRAW_SINGLEOP                     GFXOFF
 //    #define GWIN_NEED_FLASHING                       GFXOFF
 //        #define GWIN_FLASHING_PERIOD                 250
 
-//#define GWIN_NEED_CONSOLE                            GFXOFF
+#define GWIN_NEED_CONSOLE                            GFXON
 //    #define GWIN_CONSOLE_USE_HISTORY                 GFXOFF
 //        #define GWIN_CONSOLE_HISTORY_AVERAGING       GFXOFF
 //        #define GWIN_CONSOLE_HISTORY_ATCREATE        GFXOFF
 //    #define GWIN_CONSOLE_ESCSEQ                      GFXOFF
 //    #define GWIN_CONSOLE_USE_BASESTREAM              GFXOFF
-//    #define GWIN_CONSOLE_USE_FLOAT                   GFXOFF
+    #define GWIN_CONSOLE_USE_FLOAT                   GFXON
 //#define GWIN_NEED_GRAPH                              GFXOFF
 //#define GWIN_NEED_GL3D                               GFXOFF
 
-//#define GWIN_NEED_WIDGET                             GFXOFF
+#define GWIN_NEED_WIDGET                             GFXON
 //#define GWIN_FOCUS_HIGHLIGHT_WIDTH                   1
 //    #define GWIN_NEED_LABEL                          GFXOFF
 //        #define GWIN_LABEL_ATTRIBUTE                 GFXOFF
-//    #define GWIN_NEED_BUTTON                         GFXOFF
+    #define GWIN_NEED_BUTTON                         GFXON
 //        #define GWIN_BUTTON_LAZY_RELEASE             GFXOFF
 //    #define GWIN_NEED_SLIDER                         GFXOFF
 //        #define GWIN_SLIDER_NOSNAP                   GFXOFF
@@ -234,7 +234,7 @@
 //        #define GWIN_NEED_LIST_IMAGES                GFXOFF
 //    #define GWIN_NEED_PROGRESSBAR                    GFXOFF
 //        #define GWIN_PROGRESSBAR_AUTO                GFXOFF
-//    #define GWIN_NEED_KEYBOARD                       GFXOFF
+    #define GWIN_NEED_KEYBOARD                       GFXON
 //        #define GWIN_KEYBOARD_DEFAULT_LAYOUT         VirtualKeyboard_English1
 //        #define GWIN_NEED_KEYBOARD_ENGLISH1          GFXON
 //    #define GWIN_NEED_TEXTEDIT                       GFXOFF
@@ -257,7 +257,7 @@
 ///////////////////////////////////////////////////////////////////////////
 // GEVENT                                                                //
 ///////////////////////////////////////////////////////////////////////////
-//#define GFX_USE_GEVENT                               GFXOFF
+#define GFX_USE_GEVENT                               GFXON
 
 //#define GEVENT_ASSERT_NO_RESOURCE                    GFXOFF
 //#define GEVENT_MAXIMUM_SIZE                          32
@@ -267,7 +267,7 @@
 ///////////////////////////////////////////////////////////////////////////
 // GTIMER                                                                //
 ///////////////////////////////////////////////////////////////////////////
-//#define GFX_USE_GTIMER                               GFXOFF
+#define GFX_USE_GTIMER                               GFXON
 
 //#define GTIMER_THREAD_PRIORITY                       gThreadpriorityHigh
 //#define GTIMER_THREAD_WORKAREA_SIZE                  2048
@@ -276,9 +276,9 @@
 ///////////////////////////////////////////////////////////////////////////
 // GQUEUE                                                                //
 ///////////////////////////////////////////////////////////////////////////
-//#define GFX_USE_GQUEUE                               GFXOFF
+#define GFX_USE_GQUEUE                               GFXON
 
-//#define GQUEUE_NEED_ASYNC                            GFXOFF
+#define GQUEUE_NEED_ASYNC                            GFXON
 //#define GQUEUE_NEED_GSYNC                            GFXOFF
 //#define GQUEUE_NEED_FSYNC                            GFXOFF
 //#define GQUEUE_NEED_BUFFERS                          GFXOFF
@@ -286,9 +286,9 @@
 ///////////////////////////////////////////////////////////////////////////
 // GINPUT                                                                //
 ///////////////////////////////////////////////////////////////////////////
-//#define GFX_USE_GINPUT                               GFXOFF
+#define GFX_USE_GINPUT                               GFXON
 
-//#define GINPUT_NEED_MOUSE                            GFXOFF
+#define GINPUT_NEED_MOUSE                            GFXON
 //    #define GINPUT_TOUCH_STARTRAW                    GFXOFF
 //    #define GINPUT_TOUCH_NOTOUCH                     GFXOFF
 //    #define GINPUT_TOUCH_NOCALIBRATE                 GFXOFF

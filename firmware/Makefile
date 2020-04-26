@@ -5,7 +5,7 @@
 
 # Compiler options here.
 ifeq ($(USE_OPT),)
-  USE_OPT = -Og -ggdb -fomit-frame-pointer -falign-functions=16
+  USE_OPT = -Og -ggdb -fomit-frame-pointer -falign-functions=16 -specs=nosys.specs
   USE_OPT += -DPORT_IGNORE_GCC_VERSION_CHECK
 endif
 
@@ -113,6 +113,8 @@ include $(CHIBIOS)/os/hal/osal/rt-nil/osal.mk
 # RTOS files (optional).
 include $(CHIBIOS)/os/rt/rt.mk
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
+# chprintf
+include $(CHIBIOS)/os/hal/lib/streams/streams.mk
 
 include $(GFXLIB)/gfx.mk
 include $(GFXLIB)/boards/base/STM32F746-Discovery/board.mk
@@ -174,7 +176,7 @@ UINCDIR =
 ULIBDIR =
 
 # List all user libraries here
-ULIBS =
+ULIBS = -lm
 
 #
 # End of user section

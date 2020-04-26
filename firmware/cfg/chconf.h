@@ -32,6 +32,14 @@
 #define _CHIBIOS_RT_CONF_VER_6_1_
 
 /*===========================================================================*/
+/* Phil's Additions */
+
+#if defined(CHPRINTF_USE_FLOAT)
+#undef CHPRINTF_USE_FLOAT
+#endif
+#define CHPRINTF_USE_FLOAT                TRUE
+
+/*===========================================================================*/
 /**
  * @name System timers settings
  * @{

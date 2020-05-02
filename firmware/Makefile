@@ -115,7 +115,9 @@ include $(CHIBIOS)/os/rt/rt.mk
 include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # chprintf
 include $(CHIBIOS)/os/hal/lib/streams/streams.mk
-
+# lwIP
+include $(CHIBIOS)/os/various/lwip_bindings/lwip.mk
+# uGFX
 include $(GFXLIB)/gfx.mk
 include $(GFXLIB)/boards/base/STM32F746-Discovery/board.mk
 
@@ -127,6 +129,8 @@ LDSCRIPT= $(STARTUPLD)/STM32F746xG.ld
 CSRC = $(ALLCSRC) \
        $(BOARDSRC) \
        $(GFXSRC) \
+       $(CHIBIOS)/os/various/evtimer.c \
+       web/web.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

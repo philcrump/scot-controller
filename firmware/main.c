@@ -14,18 +14,62 @@
     limitations under the License.
 */
 
+#include <math.h>
+
 #include "ch.h"
 #include "hal.h"
 
 #include "gfx.h"
 #include "src/gwin/gwin_keyboard_layout.h"
 
-#include <math.h>
+#include "lwipthread.h"
+#include <lwip/dhcp.h>
+
 #include "chprintf.h"
 
+#include "web/web.h"
+
+/* From nosys.specs */
 extern double atof (const char* str);
 
 #define DEG2RAD(x)  (x * (M_PI / 180.0))
+
+static void screen_draw_ethernet_up(void *p)
+{
+  dhcp_start((struct netif*)p);
+
+  font_t font = gdispOpenFont("UI2");
+  gdispFillStringBox(200, 10, 70, 25, "UP", font, Black, White, justifyLeft);
+  gdispCloseFont(font);
+}
+
+static void screen_draw_ethernet_down(void *p)
+{
+  dhcp_stop((struct netif*)p);
+
+  font_t font = gdispOpenFont("UI2");
+  gdispFillStringBox(200, 10, 70, 25, "DOWN", font, Black, White, justifyLeft);
+  gdispCloseFont(font);
+}
+
+void screen_draw_httpd_string(char *string_ptr)
+{
+  font_t font = gdispOpenFont("UI2");
+  gdispFillStringBox(200, 35, 250, 25, string_ptr, font, Black, White, justifyLeft);
+  gdispCloseFont(font);
+}
+
+static uint8_t _macAddress[] = {0xC2, 0xAF, 0x51, 0x03, 0xCF, 0x46};
+static const lwipthread_opts_t lwip_opts = {
+  .macaddress = _macAddress,
+  .address = 0,
+  .netmask = 0,
+  .gateway = 0,
+  .addrMode = NET_ADDRESS_DHCP,
+  .ourHostName = "scot-controller",
+  .link_up_cb = screen_draw_ethernet_up,
+  .link_down_cb = screen_draw_ethernet_down
+};
 
 /*
  * This is a periodic thread that does absolutely nothing except flashing
@@ -37,9 +81,9 @@ static THD_FUNCTION(Thread1, arg) {
   (void)arg;
   chRegSetThreadName("blinker");
   while (true) {
-    palSetLine(LINE_ARD_D13);
+    //palSetLine(LINE_ARD_D13);
     chThdSleepMilliseconds(500);
-    palClearLine(LINE_ARD_D13);
+    //palClearLine(LINE_ARD_D13);
     chThdSleepMilliseconds(500);
   }
 }
@@ -90,16 +134,15 @@ int main(void) {
   halInit();
   chSysInit();
 
-  /*
-   * ARD_D13 is programmed as output (board LED).
-   */
-  palClearLine(LINE_ARD_D13);
-  palSetLineMode(LINE_ARD_D13, PAL_MODE_OUTPUT_PUSHPULL);
-
   /* Initialise screen */
   /* Screen is 480 in x, 272 in y */
   gfxInit();
   gdispClear(White);
+
+  /* Initialise Network */
+  lwipInit(&lwip_opts);
+  chThdCreateStatic(wa_http_server, sizeof(wa_http_server), NORMALPRIO + 1,
+                    http_server, NULL);
 
   font_t default_font;
   default_font = gdispOpenFont("DejaVuSans20");      // Get the first defined font.
@@ -199,6 +242,8 @@ int main(void) {
   /*
    * Blink a LED to show lethality.
    */
+  palClearLine(LINE_ARD_D13);
+  palSetLineMode(LINE_ARD_D13, PAL_MODE_OUTPUT_PUSHPULL);
   chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO+1, Thread1, NULL);
 
   int i;

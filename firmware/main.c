@@ -38,6 +38,7 @@ static GHandle label_azimuth_error;
 uint16_t azimuth_raw = 0x0000;
 uint16_t elevation_raw = 0x0000;
 uint8_t azimuth_fault_raw = 0x00;
+uint8_t elevation_fault_raw = 0x00;
 float azimuth_degrees = 0.0;
 float elevation_degrees = 0.0;
 
@@ -120,19 +121,23 @@ static void can_rx_process(CANRxFrame *message)
     {
         if(message->SID == 0x010 && message->DLC == 3)
         {
-            /* Resolver Position Message */
+            /* Azimuth Resolver Position & Fault Message */
             azimuth_raw = ((uint16_t)message->data8[0] << 8) | (uint16_t)message->data8[1];
             azimuth_fault_raw = message->data8[3];
-
-            //elevation_raw = ((uint16_t)message->data8[0] << 8) | (uint16_t)message->data8[1];
-        }
-        else if(message->SID == 0x011 && message->DLC == 3)
-        {
-            /* Resolver Position & Fault Message */
         }
         else if(message->SID == 0x013 && message->DLC == 8)
         {
-            /* Resolver Sysinfo Message */
+            /* Azimuth Resolver Sysinfo Message */
+        }
+        else if(message->SID == 0x020 && message->DLC == 3)
+        {
+            /* Elevation Resolver Position & Fault Message */
+            elevation_raw = ((uint16_t)message->data8[0] << 8) | (uint16_t)message->data8[1];
+            elevation_fault_raw = message->data8[3];
+        }
+        else if(message->SID == 0x023 && message->DLC == 8)
+        {
+            /* Elevation Resolver Sysinfo Message */
         }
     }
 }

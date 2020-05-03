@@ -30,6 +30,7 @@ static const CANConfig can_cfg = {
   .btr = CAN_BTR_SJW(2) | CAN_BTR_TS2(2) | CAN_BTR_TS1(13) | CAN_BTR_BRP(2)
 };
 
+/*
 static const CANFilter can_filter = {
   .filter = 1, // Number of filter bank to be programmed
   .mode = 0, // 0 = mask, 1 = list
@@ -38,6 +39,7 @@ static const CANFilter can_filter = {
   .register1 = 0x0010, // identifier 1
   .register2 = 0x07C0 // mask if mask mode, identifier2 if list mode
 };
+*/
 
 void can_init(void)
 {

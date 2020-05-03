@@ -618,8 +618,8 @@
                                      PIN_MODE_ALTERNATE(GPIOB_ULPI_D7) |    \
                                      PIN_MODE_INPUT(GPIOB_QSPI_NCS) |       \
                                      PIN_MODE_ALTERNATE(GPIOB_VCP_RX) |     \
-                                     PIN_MODE_INPUT(GPIOB_ARD_D15) |        \
-                                     PIN_MODE_INPUT(GPIOB_ARD_D14) |        \
+                                     PIN_MODE_ALTERNATE(GPIOB_ARD_D15) |        \
+                                     PIN_MODE_ALTERNATE(GPIOB_ARD_D14) |        \
                                      PIN_MODE_ALTERNATE(GPIOB_ULPI_D3) |    \
                                      PIN_MODE_ALTERNATE(GPIOB_ULPI_D4) |    \
                                      PIN_MODE_ALTERNATE(GPIOB_ULPI_D5) |    \
@@ -666,8 +666,8 @@
                                      PIN_PUPDR_PULLUP(GPIOB_ULPI_D7) |      \
                                      PIN_PUPDR_PULLUP(GPIOB_QSPI_NCS) |     \
                                      PIN_PUPDR_FLOATING(GPIOB_VCP_RX) |     \
-                                     PIN_PUPDR_PULLUP(GPIOB_ARD_D15) |      \
-                                     PIN_PUPDR_PULLUP(GPIOB_ARD_D14) |      \
+                                     PIN_PUPDR_FLOATING(GPIOB_ARD_D15) |      \
+                                     PIN_PUPDR_FLOATING(GPIOB_ARD_D14) |      \
                                      PIN_PUPDR_FLOATING(GPIOB_ULPI_D3) |    \
                                      PIN_PUPDR_FLOATING(GPIOB_ULPI_D4) |    \
                                      PIN_PUPDR_FLOATING(GPIOB_ULPI_D5) |    \
@@ -698,8 +698,8 @@
                                      PIN_AFIO_AF(GPIOB_ULPI_D7, 10U) |      \
                                      PIN_AFIO_AF(GPIOB_QSPI_NCS, 0U) |      \
                                      PIN_AFIO_AF(GPIOB_VCP_RX, 7U))
-#define VAL_GPIOB_AFRH              (PIN_AFIO_AF(GPIOB_ARD_D15, 0U) |       \
-                                     PIN_AFIO_AF(GPIOB_ARD_D14, 0U) |       \
+#define VAL_GPIOB_AFRH              (PIN_AFIO_AF(GPIOB_ARD_D15, 9U) |       \
+                                     PIN_AFIO_AF(GPIOB_ARD_D14, 9U) |       \
                                      PIN_AFIO_AF(GPIOB_ULPI_D3, 10U) |      \
                                      PIN_AFIO_AF(GPIOB_ULPI_D4, 10U) |      \
                                      PIN_AFIO_AF(GPIOB_ULPI_D5, 10U) |      \

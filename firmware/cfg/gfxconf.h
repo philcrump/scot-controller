@@ -100,7 +100,7 @@
 //    #define GDISP_NEED_TEXT_BOXPADLR                 1
 //    #define GDISP_NEED_TEXT_BOXPADTB                 1
 //    #define GDISP_NEED_ANTIALIAS                     GFXOFF
-    #define GDISP_NEED_UTF8                          GFXON
+//    #define GDISP_NEED_UTF8                          GFXOFF
 //    #define GDISP_NEED_TEXT_KERNING                  GFXOFF
 //    #define GDISP_INCLUDE_FONT_UI1                   GFXOFF
     #define GDISP_INCLUDE_FONT_UI2                   GFXON       // The smallest preferred font.
@@ -159,7 +159,7 @@
 //        #define GDISP_IMAGE_PNG_Z_BUFFER_SIZE        32768
 //    #define GDISP_NEED_IMAGE_ACCOUNTING              GFXOFF
 
-//#define GDISP_NEED_PIXMAP                            GFXOFF
+#define GDISP_NEED_PIXMAP                            GFXON
 //    #define GDISP_NEED_PIXMAP_IMAGE                  GFXOFF
 
 //#define GDISP_DEFAULT_ORIENTATION                    gOrientationLandscape    // If not defined the native hardware orientation is used.
@@ -218,7 +218,7 @@
 
 #define GWIN_NEED_WIDGET                             GFXON
 //#define GWIN_FOCUS_HIGHLIGHT_WIDTH                   1
-//    #define GWIN_NEED_LABEL                          GFXOFF
+    #define GWIN_NEED_LABEL                          GFXON
 //        #define GWIN_LABEL_ATTRIBUTE                 GFXOFF
     #define GWIN_NEED_BUTTON                         GFXON
 //        #define GWIN_BUTTON_LAZY_RELEASE             GFXOFF

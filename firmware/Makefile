@@ -127,6 +127,7 @@ LDSCRIPT= $(STARTUPLD)/STM32F746xG.ld
 CSRC = $(ALLCSRC) \
        $(BOARDSRC) \
        $(GFXSRC) \
+       can.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

@@ -20,3 +20,7 @@ The firmware for the board uses ChibiOS and uGFX.
 ### Adaptor PCB (CAD Render)
 
 ![PCB CAD Render](https://raw.githubusercontent.com/philcrump/scot-controller/master/scot-controller-cad.png)
+
+#### Errata - April 2020
+
+* Can Transceiver <-> Arduino footprint, RX / TX mapping is swapped.

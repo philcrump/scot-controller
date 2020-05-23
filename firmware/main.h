@@ -4,8 +4,6 @@
 #include "ch.h"
 #include "hal.h"
 
-#include "can.h"
-
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
 
@@ -25,5 +23,13 @@
 #define ITERATOR_INC()    iterator = iterator < 2 ? iterator + 1 : 0
 
 #define DEG2RAD(x)  ((x) * (M_PI / 180.0))
+
+
+void screen_draw_ethernet_up(void);
+void screen_draw_ethernet_down(void);
+
+
+#include "can.h"
+#include "interface_udp.h"
 
 #endif /* __MAIN_H__ */

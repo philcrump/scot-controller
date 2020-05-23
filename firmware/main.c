@@ -23,6 +23,8 @@ extern double atof (const char* str);
 #include "gfx.h"
 #include "src/gwin/gwin_keyboard_layout.h"
 
+#include "lwipthread.h"
+
 static font_t font_ui2;
 static font_t font_dejavusans20;
 static font_t font_dejavusans32;
@@ -58,38 +60,38 @@ float elevation_error_degrees = 0.0;
 
 
 static THD_WORKING_AREA(can_rx_service_wa, 128);
+static THD_WORKING_AREA(udp_tx_service_wa, 128);
+static THD_WORKING_AREA(udp_rx_service_wa, 128);
 
-/*
- * This is a periodic thread that does absolutely nothing except flashing
- * a LED.
- */
-bool led_mode = false;
-static THD_WORKING_AREA(waThread1, 128);
-static THD_FUNCTION(Thread1, arg)
+void screen_draw_ethernet_up(void)
 {
-  (void)arg;
-  chRegSetThreadName("blinker");
-  while (true) {
-    palSetLine(LINE_ARD_D13);
-    if(led_mode)
-      chThdSleepMilliseconds(100);
-    else
-      chThdSleepMilliseconds(500);
-    palClearLine(LINE_ARD_D13);
-    if(led_mode)
-      chThdSleepMilliseconds(100);
-    else
-      chThdSleepMilliseconds(500);
-  }
+  gdispFillStringBox(200, 10, 70, 25, "UP", font_ui2, Black, White, justifyLeft);
 }
 
-  static const GVSpecialKey NumPadSKeys[] = {
-    { "Cancel", "X", 0, 0 },             // \001 (1) = Backspace
-    { "Submit", "S", 0, 0 }             // \002 (2) = Enter
-  };
-  static const char *NumPadSet[] = { "123",     "456",    "789",      "0.\001\002",  0 };
-  static const GVKeySet NumPadSets[] = { NumPadSet, 0 };
-  static const GVKeyTable VirtualKeyboard_NumPad = { NumPadSKeys, NumPadSets };
+void screen_draw_ethernet_down(void)
+{
+  gdispFillStringBox(200, 10, 70, 25, "DOWN", font_ui2, Black, White, justifyLeft);
+}
+
+static uint8_t _macAddress[] = {0xC2, 0xAF, 0x51, 0x03, 0xCF, 0x46};
+static const lwipthread_opts_t lwip_opts = {
+  .macaddress = _macAddress,
+  .address = 0,
+  .netmask = 0,
+  .gateway = 0,
+  .addrMode = NET_ADDRESS_DHCP,
+  .ourHostName = "scot-controller",
+  .link_up_cb = ip_link_up_cb,
+  .link_down_cb = ip_link_down_cb
+};
+
+static const GVSpecialKey NumPadSKeys[] = {
+  { "Cancel", "X", 0, 0 },             // \001 (1) = Backspace
+  { "Submit", "S", 0, 0 }             // \002 (2) = Enter
+};
+static const char *NumPadSet[] = { "123",     "456",    "789",      "0.\001\002",  0 };
+static const GVKeySet NumPadSets[] = { NumPadSet, 0 };
+static const GVKeyTable VirtualKeyboard_NumPad = { NumPadSKeys, NumPadSets };
 
 static GHandle    ghConsole;
 static  GHandle   ghKeyboard;
@@ -139,6 +141,8 @@ static void can_rx_process(CANRxFrame *message)
         {
             /* Elevation Resolver Sysinfo Message */
         }
+
+        ip_send_canmessage(message);
     }
 }
 
@@ -278,6 +282,8 @@ void graphic_azimuth_draw(void)
   gwinSetText(label_azimuth_error, text_azimuth_string, false);
 }
 
+uint32_t debug_number = 50;
+
 /*
  * Application entry point.
  */
@@ -309,14 +315,17 @@ int main(void) {
   widgets_init();
   graphic_azimuth_draw();
 
+  lwipInit(&lwip_opts);
+
   /* Set up CAN */
   chThdCreateStatic(can_rx_service_wa, sizeof(can_rx_service_wa), NORMALPRIO, can_rx_service_thread, (void *)&can_rx_process);
 
-  /*
-   * ARD_D13 is programmed as output (board LED).
-   */
-  palClearLine(LINE_ARD_D13);
-  palSetLineMode(LINE_ARD_D13, PAL_MODE_OUTPUT_PUSHPULL);
+  /* Set up UDP TX */
+  chThdCreateStatic(udp_tx_service_wa, sizeof(udp_tx_service_wa), NORMALPRIO, udp_tx_service_thread, NULL);
+
+  /* Set up UDP RX */
+  chThdCreateStatic(udp_rx_service_wa, sizeof(udp_rx_service_wa), NORMALPRIO, udp_rx_service_thread, NULL);
+
 
   gdispDrawStringBox(410, 247, 70, 25, "Phil Crump", font_ui2, Black, justifyLeft);
 
@@ -367,16 +376,13 @@ int main(void) {
 
   geventAttachSource(&gl, gwinKeyboardGetEventSource(ghKeyboard), GLISTEN_KEYTRANSITIONS|GLISTEN_KEYUP);
 
-  /*
-   * Blink a LED to show lethality.
-   */
-  chThdCreateStatic(waThread1, sizeof(waThread1), NORMALPRIO+1, Thread1, NULL);
-
   int i;
   GEvent *pe;
   GEventKeyboard *pk;
   char kb_input_buffer[128];
   int kb_input_index = 0;
+
+  char debug_string[8];
 
   while (true) {
     //chThdSleepMilliseconds(500);
@@ -396,6 +402,9 @@ int main(void) {
     //elevation_degrees = (float)elevation_raw * (360.0 / 65536.0);
     //chsnprintf(el_text_string, 13, "EL:  %5.2f", elevation_degrees);
     //gwinSetText(label_elevation_value, el_text_string, false);
+
+    chsnprintf(debug_string, 7, "%d", debug_number);
+    gdispFillStringBox(300, 10, 70, 25, debug_string, font_ui2, Black, White, justifyLeft);
 
     // Get an Event
     pe = geventEventWait(&gl, 20); // milliseconds

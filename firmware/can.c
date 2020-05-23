@@ -72,8 +72,6 @@ void can_send_reset(const uint16_t target_sid)
     canTransmitTimeout(&CAND1, CAN_ANY_MAILBOX, &txmsg, TIME_IMMEDIATE);
 }
 
-extern bool led_mode;
-
 THD_FUNCTION(can_rx_service_thread, arg)
 {
     void (*can_rx_callback)(CANRxFrame *) = arg;
@@ -88,7 +86,6 @@ THD_FUNCTION(can_rx_service_thread, arg)
         result = canReceiveTimeout(&CAND1, CAN_ANY_MAILBOX, &rxmsg, TIME_MS2I(100));
         if(result == MSG_OK)
         {
-            led_mode = true;
             /* Message Received */
             can_rx_callback(&rxmsg);
         }

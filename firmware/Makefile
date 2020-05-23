@@ -91,6 +91,7 @@ MCU  = cortex-m7
 
 # Imported source files and paths.
 CHIBIOS  := ChibiOS
+LWIP     := lwIP
 CONFDIR  := ./cfg
 BUILDDIR := ./builds
 DEPDIR   := $(BUILDDIR)/.dep
@@ -116,7 +117,8 @@ include $(CHIBIOS)/os/common/ports/ARMCMx/compilers/GCC/mk/port_v7m.mk
 # chprintf
 include $(CHIBIOS)/os/hal/lib/streams/streams.mk
 # lwIP
-include $(CHIBIOS)/os/various/lwip_bindings/lwip.mk
+# include $(CHIBIOS)/os/various/lwip_bindings/lwip.mk
+include $(CONFDIR)/ch_lwip_bindings.mk
 # uGFX
 include $(GFXLIB)/gfx.mk
 include $(GFXLIB)/boards/base/STM32F746-Discovery/board.mk

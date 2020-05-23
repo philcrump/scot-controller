@@ -7,3 +7,6 @@
 [submodule "pcb/lib/agg-kicad"]
 	path = pcb/lib/agg-kicad
 	url = https://github.com/philcrump/agg-kicad.git
+[submodule "firmware/lwIP"]
+	path = firmware/lwIP
+	url = https://git.savannah.gnu.org/git/lwip.git

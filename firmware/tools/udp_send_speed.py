@@ -19,7 +19,6 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def send_message():
     global sock, MESSAGE, keeprunning, UDP_IP, UDP_PORT
-    print("t")
     sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
     if keeprunning:
         threading.Timer(0.05, send_message).start()

@@ -123,6 +123,11 @@ udp_rx_queue_t udp_rx_queue = {
 static const uint8_t udp_rx_magic[4] = { 0x42, 0x45, 0x50, 0x49 }; /* BEPI */
 static void _udp_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p, const struct ip4_addr *addr, u16_t port)
 {
+  (void)arg;
+  (void)upcb;
+  (void)addr;
+  (void)port;
+  
   /* Length Limits */
   if(p->len < 5 || p-> len > 64)
   {

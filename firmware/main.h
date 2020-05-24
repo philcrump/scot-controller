@@ -24,12 +24,22 @@
 
 #define DEG2RAD(x)  ((x) * (M_PI / 180.0))
 
-
-void screen_draw_ethernet_up(void);
-void screen_draw_ethernet_down(void);
-
-
+#include "screen.h"
 #include "can.h"
 #include "interface_udp.h"
+
+/* TODO: Fix this mess */
+extern uint16_t azimuth_raw;
+extern uint16_t elevation_raw;
+extern uint8_t azimuth_fault_raw;
+extern uint8_t elevation_fault_raw;
+extern float azimuth_degrees;
+extern float elevation_degrees;
+
+extern float azimuth_demand_degrees;
+extern float elevation_demand_degrees;
+
+extern float azimuth_error_degrees;
+extern float elevation_error_degrees;
 
 #endif /* __MAIN_H__ */

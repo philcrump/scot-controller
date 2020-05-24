@@ -132,6 +132,7 @@ CSRC = $(ALLCSRC) \
        $(BOARDSRC) \
        $(GFXSRC) \
        $(CHIBIOS)/os/various/evtimer.c \
+       screen.c \
        can.c \
        interface_udp.c \
        main.c

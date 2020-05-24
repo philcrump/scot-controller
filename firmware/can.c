@@ -43,53 +43,83 @@ static const CANFilter can_filter = {
 
 void can_init(void)
 {
-    if(can_initialised)
-    {
-        return;
-    }
+  if(can_initialised)
+  {
+    return;
+  }
 
-    //canSTM32SetFilters(&CAND1, 1, 1, &can_filter);
+  //canSTM32SetFilters(&CAND1, 1, 1, &can_filter);
 
-    canStart(&CAND1, &can_cfg);
+  canStart(&CAND1, &can_cfg);
 
-    can_initialised = true;
+  can_initialised = true;
 }
 
 void can_send_reset(const uint16_t target_sid)
 {
-    CANTxFrame txmsg;
+  CANTxFrame txmsg;
 
-    txmsg.IDE = CAN_IDE_STD; // Identifier Type: Standard
-    txmsg.SID = target_sid; // Standard Identifier Value (11bits)
-    txmsg.RTR = CAN_RTR_DATA; // Frame Type
-    txmsg.DLC = 5; // Data Length (max = 8)
-    txmsg.data8[0] = 'R';
-    txmsg.data8[1] = 'E';
-    txmsg.data8[2] = 'S';
-    txmsg.data8[3] = 'E';
-    txmsg.data8[4] = 'T';
+  txmsg.IDE = CAN_IDE_STD; // Identifier Type: Standard
+  txmsg.SID = target_sid; // Standard Identifier Value (11bits)
+  txmsg.RTR = CAN_RTR_DATA; // Frame Type
+  txmsg.DLC = 5; // Data Length (max = 8)
+  txmsg.data8[0] = 'R';
+  txmsg.data8[1] = 'E';
+  txmsg.data8[2] = 'S';
+  txmsg.data8[3] = 'E';
+  txmsg.data8[4] = 'T';
 
-    canTransmitTimeout(&CAND1, CAN_ANY_MAILBOX, &txmsg, TIME_IMMEDIATE);
+  canTransmitTimeout(&CAND1, CAN_ANY_MAILBOX, &txmsg, TIME_IMMEDIATE);
+}
+
+static void can_rx_process(CANRxFrame *message)
+{
+  if(message->RTR == CAN_RTR_DATA
+    && message->IDE == CAN_IDE_STD)
+  {
+    if(message->SID == 0x010 && message->DLC == 3)
+    {
+      /* Azimuth Resolver Position & Fault Message */
+      azimuth_raw = ((uint16_t)message->data8[0] << 8) | (uint16_t)message->data8[1];
+      azimuth_fault_raw = message->data8[3];
+    }
+    else if(message->SID == 0x013 && message->DLC == 8)
+    {
+      /* Azimuth Resolver Sysinfo Message */
+    }
+    else if(message->SID == 0x020 && message->DLC == 3)
+    {
+      /* Elevation Resolver Position & Fault Message */
+      elevation_raw = ((uint16_t)message->data8[0] << 8) | (uint16_t)message->data8[1];
+      elevation_fault_raw = message->data8[3];
+    }
+    else if(message->SID == 0x023 && message->DLC == 8)
+    {
+      /* Elevation Resolver Sysinfo Message */
+    }
+
+    ip_send_canmessage(message);
+  }
 }
 
 THD_FUNCTION(can_rx_service_thread, arg)
 {
-    void (*can_rx_callback)(CANRxFrame *) = arg;
+  (void)arg;
 
-    msg_t result;
-    CANRxFrame rxmsg;
+  msg_t result;
+  CANRxFrame rxmsg;
 
-    can_init();
+  can_init();
 
-    while(1)
+  while(1)
+  {
+    result = canReceiveTimeout(&CAND1, CAN_ANY_MAILBOX, &rxmsg, TIME_MS2I(100));
+    if(result == MSG_OK)
     {
-        result = canReceiveTimeout(&CAND1, CAN_ANY_MAILBOX, &rxmsg, TIME_MS2I(100));
-        if(result == MSG_OK)
-        {
-            /* Message Received */
-            can_rx_callback(&rxmsg);
-        }
-
-        //watchdog_feed(WATCHDOG_DOG_CANRX);
+      /* Message Received */
+      can_rx_process(&rxmsg);
     }
+
+    //watchdog_feed(WATCHDOG_DOG_CANRX);
+  }
 }

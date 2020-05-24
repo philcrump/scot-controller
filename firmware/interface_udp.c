@@ -7,13 +7,16 @@
 
 static bool ip_is_up = false;
 
+bool ip_txrx_link_is_up(void)
+{
+  return ip_is_up;
+}
+
 void ip_link_up_cb(void *p)
 {
   dhcp_start((struct netif*)p);
 
   ip_is_up = true;
-
-  screen_draw_ethernet_up();
 }
 
 void ip_link_down_cb(void *p)
@@ -21,8 +24,6 @@ void ip_link_down_cb(void *p)
   dhcp_stop((struct netif*)p);
 
   ip_is_up = false;
-
-  screen_draw_ethernet_down();
 }
 
 typedef struct {
@@ -42,7 +43,7 @@ static udp_tx_queue_t udp_tx_queue =
 static struct udp_pcb *_udp_tx_pcb_ptr = NULL;
 static struct pbuf *_udp_pbuf_ptr;
 
-void _udp_tx(void *arg)
+static void _udp_tx(void *arg)
 {
   (void)arg;
 
@@ -89,7 +90,6 @@ THD_FUNCTION(udp_tx_service_thread, arg)
   }
 }
 
-
 void ip_send_canmessage(CANRxFrame *message_ptr)
 {
   chMtxLock(&udp_tx_queue.mutex);
@@ -102,7 +102,6 @@ void ip_send_canmessage(CANRxFrame *message_ptr)
 }
 
 
-static struct udp_pcb *_udp_rx_pcb_ptr = NULL;
 
 typedef struct {
   bool waiting;
@@ -112,13 +111,11 @@ typedef struct {
   condition_variable_t condition;
 } udp_rx_queue_t;
 
-udp_rx_queue_t udp_rx_queue = {
+static udp_rx_queue_t udp_rx_queue = {
   .waiting = false,
   .mutex = _MUTEX_DATA(udp_rx_queue.mutex),
   .condition = _CONDVAR_DATA(udp_rx_queue.condition)
 };
-
-
 
 static const uint8_t udp_rx_magic[4] = { 0x42, 0x45, 0x50, 0x49 }; /* BEPI */
 static void _udp_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p, const struct ip4_addr *addr, u16_t port)
@@ -152,6 +149,7 @@ static void _udp_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p, const st
   pbuf_free(p);
 }
 
+static struct udp_pcb *_udp_rx_pcb_ptr;
 static void _udp_rx_init(void *arg)
 {
   (void)arg;
@@ -160,8 +158,6 @@ static void _udp_rx_init(void *arg)
   udp_bind(_udp_rx_pcb_ptr, IP_ADDR_ANY, 777);
   udp_recv(_udp_rx_pcb_ptr, &_udp_rx_cb, (void *)0);
 }
-
-extern uint32_t debug_number;
 
 static uint8_t udp_rx_commandFrame[64];
 static uint32_t udp_rx_commandLength;
@@ -201,7 +197,7 @@ THD_FUNCTION(udp_rx_service_thread, arg)
         txmsg.SID = 0x2B;
         txmsg.RTR = CAN_RTR_DATA;
         txmsg.DLC = 2;
-        txmsg.data16[0] = *(uint16_t *)(&udp_rx_commandFrame[7]);
+        txmsg.data16[0] = *(int16_t *)(&udp_rx_commandFrame[6]);
 
         canTransmitTimeout(&CAND1, CAN_ANY_MAILBOX, &txmsg, TIME_IMMEDIATE);
       }

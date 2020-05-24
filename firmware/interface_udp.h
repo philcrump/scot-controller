@@ -1,6 +1,8 @@
 #ifndef __INTERFACE_UDP_H__
 #define __INTERFACE_UDP_H__
 
+bool ip_txrx_link_is_up(void);
+
 void ip_link_up_cb(void *p);
 void ip_link_down_cb(void *p);
 

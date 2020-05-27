@@ -27,6 +27,7 @@
 #include "screen.h"
 #include "can.h"
 #include "interface_udp.h"
+#include "app_time.h"
 
 /* TODO: Fix this mess */
 extern uint16_t azimuth_raw;

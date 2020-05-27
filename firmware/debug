@@ -27,7 +27,7 @@ locate_black_magic() {
   return 1
 }
 debug_target() {
-	$flashtool -q \
+  $flashtool -q \
     -ex 'file '$binary                          \
     -ex 'target extended-remote '$programmer    \
     -ex 'monitor tpwr $programmer_power'        \
@@ -36,6 +36,19 @@ debug_target() {
     -ex 'set mem inaccessible-by-default off'   \
     -ex 'load '$binary                          \
     -ex 'compare-sections'
+}
+
+
+debug_target_openocd() {
+  $flashtool -q \
+    -ex 'file '$binary                          \
+    -ex 'set remote hardware-breakpoint-limit 8'\
+    -ex 'set remote hardware-watchpoint-limit 4'\
+    -ex 'set remotetimeout 10000'               \
+    -ex 'set remote interrupt-on-connect off'   \
+    -ex 'set mem inaccessible-by-default off'   \
+    -ex 'target extended-remote localhost:3333' \
+    -ex 'load '$binary
 }
 
 binary="${1}.elf"
@@ -53,4 +66,6 @@ fi
 if programmer="`locate_black_magic`";
 then
 	debug_target;
+else
+  debug_target_openocd;
 fi

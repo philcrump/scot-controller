@@ -10,6 +10,9 @@ extern double atof (const char* str);
 #include "screen_images/image_network_up_bmp.h"
 #include "screen_images/image_network_down_bmp.h"
 
+#include "screen_images/image_clock_up_bmp.h"
+#include "screen_images/image_clock_down_bmp.h"
+
 static font_t font_ui2;
 static font_t font_dejavusans20;
 static font_t font_dejavusans32;
@@ -22,8 +25,6 @@ static GHandle label_azimuth_error;
 //static GDisplay* pixmap_elevation_graphic;
 //static GHandle label_elevation_value;
 
-static bool screen_ip_link_is_up = false;
-
 #define EL_GRAPHIC_ORIGIN_X 80
 #define EL_GRAPHIC_ORIGIN_Y 80
 #define EL_GRAPHIC_RADIUS   60
@@ -31,6 +32,8 @@ static bool screen_ip_link_is_up = false;
 #define AZ_GRAPHIC_ORIGIN_X 80
 #define AZ_GRAPHIC_ORIGIN_Y 180
 #define AZ_GRAPHIC_RADIUS   60
+
+static uint32_t screen_ip_link_status = APP_IP_LINK_STATUS_DOWN;
 
 static GHandle screen_image_ethernet_up;
 static GHandle screen_image_ethernet_down;
@@ -47,6 +50,41 @@ static void screen_draw_ethernet_down(void)
   gwinShow(screen_image_ethernet_down);
 }
 
+static uint32_t screen_app_ip_service_sntp_status = APP_IP_SERVICE_SNTP_STATUS_DOWN;
+
+
+static GHandle screen_data_clock;
+static GHandle screen_image_clock_up;
+static GHandle screen_image_clock_down;
+
+static void screen_draw_clock_up(void)
+{
+  gwinHide(screen_image_clock_down);
+  gwinShow(screen_image_clock_up);
+}
+
+static void screen_draw_clock_down(void)
+{
+  gwinHide(screen_image_clock_up);
+  gwinShow(screen_image_clock_down);
+}
+
+static char _screen_clock_string_buffer[32];
+static char *screen_clock_string(void)
+{
+  static uint32_t _ms;
+  static struct tm _tm;
+  static RTCDateTime _screen_clock_string_datetime;
+
+  rtcGetTime(&RTCD1, &_screen_clock_string_datetime);
+  rtcConvertDateTimeToStructTm(&_screen_clock_string_datetime, &_tm, &_ms);
+  chsnprintf(_screen_clock_string_buffer, 31, "%02d/%02d/%04d %02d:%02d:%02d.%03d",
+    _tm.tm_mday, _tm.tm_mon+1, _tm.tm_year+1900,
+    _tm.tm_hour, _tm.tm_min, _tm.tm_sec, _ms
+  );
+  return (char *)_screen_clock_string_buffer;
+}
+
 static const GVSpecialKey NumPadSKeys[] = {
   { "Cancel", "X", 0, 0 },             // \001 (1) = Backspace
   { "Submit", "S", 0, 0 }             // \002 (2) = Enter
@@ -55,9 +93,10 @@ static const char *NumPadSet[] = { "123",     "456",    "789",      "0.\001\002"
 static const GVKeySet NumPadSets[] = { NumPadSet, 0 };
 static const GVKeyTable VirtualKeyboard_NumPad = { NumPadSKeys, NumPadSets };
 
-static GHandle    ghConsole;
-static  GHandle   ghKeyboard;
-static void createKeyboard(void) {
+static GHandle ghConsole;
+static GHandle ghKeyboard;
+static void createKeyboard(void)
+{
   GWidgetInit   wi;
   gwinWidgetClearInit(&wi);
 
@@ -108,7 +147,6 @@ static void widgets_init(void)
  
   label_azimuth_value = gwinLabelCreate(NULL, &wi);
 
-  gwinWidgetClearInit(&wi);
   gwinSetDefaultFont(font_dejavusans20);
 
   /* Create Az "Demand:" label */
@@ -134,8 +172,6 @@ static void widgets_init(void)
   wi.g.show = true;
  
   label_azimuth_demand = gwinLabelCreate(NULL, &wi);
-
-  gwinWidgetClearInit(&wi);
 
   /* Create Az "Error" label */
 
@@ -165,13 +201,13 @@ static void widgets_init(void)
 
   pixmap_azimuth_graphic = gdispPixmapCreate(140, 140);
 
-  /* Ethernet Status */
+  /* Ethernet Status Graphic */
   wi.g.x = 300;
   wi.g.y = 250;
   wi.g.width = 21;
   wi.g.height = 19;
+  wi.text = "-   Error:";
   wi.customDraw = NULL;
-  wi.text = "";
 
   wi.g.show = false;
   screen_image_ethernet_up = gwinImageCreate(NULL, &wi.g);
@@ -182,6 +218,36 @@ static void widgets_init(void)
   screen_image_ethernet_down = gwinImageCreate(NULL, &wi.g);
   gwinImageOpenMemory(screen_image_ethernet_down, image_network_down_bmp);
   gwinImageCache(screen_image_ethernet_down);
+
+  /* RT Clock Status Graphic */
+  wi.g.x = 275;
+  wi.g.y = 250;
+  wi.g.width = 19;
+  wi.g.height = 19;
+  wi.text = "-   Error:";
+  wi.customDraw = NULL;
+
+  wi.g.show = false;
+  screen_image_clock_up = gwinImageCreate(NULL, &wi.g);
+  gwinImageOpenMemory(screen_image_clock_up, image_clock_up_bmp);
+  gwinImageCache(screen_image_clock_up);
+
+  wi.g.show = true;
+  screen_image_clock_down = gwinImageCreate(NULL, &wi.g);
+  gwinImageOpenMemory(screen_image_clock_down, image_clock_down_bmp);
+  gwinImageCache(screen_image_clock_down);
+
+  /* Clock Data */
+  gwinSetDefaultFont(font_ui2);
+  wi.g.x = 110;
+  wi.g.y = 250;
+  wi.g.width = 150;
+  wi.g.height = 20;
+  wi.text = "";
+  wi.customDraw = NULL;
+
+  wi.g.show = true;
+  screen_data_clock = gwinLabelCreate(NULL, &wi);
 }
 
 static float graphic_azimuth_degrees_last = -999.9;
@@ -237,6 +303,8 @@ void graphic_azimuth_draw(void)
 THD_FUNCTION(screen_service_thread, arg)
 {
   (void)arg;
+
+  chRegSetThreadName("screen");
 
   /* Initialise screen */
   /* Screen is 480 in x, 272 in y */
@@ -309,6 +377,11 @@ THD_FUNCTION(screen_service_thread, arg)
   char kb_input_buffer[128];
   int kb_input_index = 0;
 
+  //while(true)
+  //{
+  //  chThdSleepMilliseconds(500);
+  //}
+
   while(true)
   {
     //chThdSleepMilliseconds(500);
@@ -325,16 +398,47 @@ THD_FUNCTION(screen_service_thread, arg)
     }
     graphic_azimuth_draw();
 
-    if(!screen_ip_link_is_up && ip_txrx_link_is_up())
+    if(screen_ip_link_status != app_ip_link_status())
     {
-      screen_draw_ethernet_up();
-      screen_ip_link_is_up = true;
+      /* Update IP Link Status */
+      screen_ip_link_status = app_ip_link_status();
+
+      if(screen_ip_link_status == APP_IP_LINK_STATUS_DOWN)
+      {
+        screen_draw_ethernet_down();
+      }
+      else if(screen_ip_link_status == APP_IP_LINK_STATUS_UPBUTNOIP)
+      {
+        /* TODO add intermediate icon (orange?) */
+        screen_draw_ethernet_down();
+      }
+      else if(screen_ip_link_status == APP_IP_LINK_STATUS_BOUND)
+      {
+        screen_draw_ethernet_up();
+      }
     }
-    else if(screen_ip_link_is_up && !ip_txrx_link_is_up())
+
+    if(screen_app_ip_service_sntp_status != app_ip_service_sntp_status())
     {
-      screen_draw_ethernet_down();
-      screen_ip_link_is_up = false;
+      /* Update SNTP app status */
+      screen_app_ip_service_sntp_status = app_ip_service_sntp_status();
+
+      if(screen_app_ip_service_sntp_status == APP_IP_SERVICE_SNTP_STATUS_DOWN)
+      {
+        screen_draw_clock_down();
+      }
+      else if(screen_app_ip_service_sntp_status == APP_IP_SERVICE_SNTP_STATUS_POLLING)
+      {
+        /* TODO add intermediate icon (orange?) */
+        screen_draw_clock_down();
+      }
+      else if(screen_app_ip_service_sntp_status == APP_IP_SERVICE_SNTP_STATUS_SYNCED)
+      {
+        screen_draw_clock_up();
+      }
     }
+
+    gwinSetText(screen_data_clock, screen_clock_string(), false);
 
     //elevation_degrees = (float)elevation_raw * (360.0 / 65536.0);
     //chsnprintf(el_text_string, 13, "EL:  %5.2f", elevation_degrees);
@@ -345,7 +449,8 @@ THD_FUNCTION(screen_service_thread, arg)
 
     switch(pe->type) {
       case GEVENT_GWIN_BUTTON:
-        if (((GEventGWinButton*)pe)->gwin == ghButton1) {
+        if (((GEventGWinButton*)pe)->gwin == ghButton1)
+        {
           // Our button has been pressed
 
           /* Show Keyboard */
@@ -397,6 +502,7 @@ THD_FUNCTION(screen_service_thread, arg)
             if(kb_input_index > 127)
             {
               /* String too long, user is an idiot, just exit */
+              kb_input_index = 0;
               gwinClear(ghConsole);
               gwinHide(ghConsole);
               gwinHide(ghKeyboard);

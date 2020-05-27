@@ -2,28 +2,126 @@
 
 #include <lwip/dhcp.h>
 #include <lwip/tcpip.h>
+#include <lwip/apps/sntp.h>
 
 #include <string.h>
 
-static bool ip_is_up = false;
+static struct netif* _ip_netif_ptr = NULL;
 
-bool ip_txrx_link_is_up(void)
+static bool _ip_link_is_up = false;
+
+// eshail.batc.org.uk - 185.83.169.27
+static const ip_addr_t ipaddr_ntp_goonhilly = {
+  .addr = (27 << 24) | (169 << 16) | (83 << 8) | (185)
+};
+
+uint32_t app_ip_link_status(void)
 {
-  return ip_is_up;
+  if(_ip_link_is_up && _ip_netif_ptr != NULL)
+  {
+    if(netif_dhcp_data(_ip_netif_ptr)->state == 10) // DHCP_STATE_BOUND = 10
+    {
+      return APP_IP_LINK_STATUS_BOUND;
+    }
+    else
+    {
+      return APP_IP_LINK_STATUS_UPBUTNOIP;
+    }
+  }
+  else
+  {
+    return APP_IP_LINK_STATUS_DOWN;
+  }
 }
 
 void ip_link_up_cb(void *p)
 {
-  dhcp_start((struct netif*)p);
+  _ip_netif_ptr = (struct netif*)p;
 
-  ip_is_up = true;
+  dhcp_start(_ip_netif_ptr);
+
+  _ip_link_is_up = true;
 }
 
 void ip_link_down_cb(void *p)
 {
-  dhcp_stop((struct netif*)p);
+  _ip_netif_ptr = (struct netif*)p;
 
-  ip_is_up = false;
+  dhcp_stop(_ip_netif_ptr);
+
+  _ip_link_is_up = false;
+}
+
+static void _user_ip_sntp_start(void *arg)
+{
+  (void)arg;
+
+  /* Set Primary server (can be overwritten by DNS) */
+  sntp_setserver(0, &ipaddr_ntp_goonhilly);
+  /* Also set as fallback after DHCP-populated servers */
+  sntp_setserver(2, &ipaddr_ntp_goonhilly);
+  sntp_init();
+}
+
+static void _user_ip_sntp_stop(void *arg)
+{
+  (void)arg;
+  
+  sntp_stop();
+}
+
+static bool _user_ip_services_running = false;
+THD_FUNCTION(user_ip_services_thread, arg)
+{
+  (void)arg;
+
+  chRegSetThreadName("user_ip_services");
+
+  while(true)
+  {
+    if(_ip_netif_ptr != NULL)
+    {
+      if(!_user_ip_services_running
+          && app_ip_link_status() == APP_IP_LINK_STATUS_BOUND)
+      {
+        /* Start Services */
+        tcpip_callback(_user_ip_sntp_start, NULL);
+
+        _user_ip_services_running = true;
+      }
+      else if(_user_ip_services_running
+          && app_ip_link_status() != APP_IP_LINK_STATUS_BOUND)
+      {
+        /* Stop Services */
+        tcpip_callback(_user_ip_sntp_stop, NULL);
+
+        _user_ip_services_running = false;
+      }
+    }
+    chThdSleepMilliseconds(100);
+  }
+};
+
+uint32_t app_ip_service_sntp_status(void)
+{
+  uint32_t i;
+  uint8_t result = 0;
+  for (i = 0; i < SNTP_MAX_SERVERS; i++)
+  {
+    result |= (sntp_getreachability(i) & 0x3);
+  }
+  if((result & 0x1) > 0 && !app_time_syncing)
+  {
+    return APP_IP_SERVICE_SNTP_STATUS_SYNCED;
+  }
+  else if((result & 0x2) > 0)
+  {
+    return APP_IP_SERVICE_SNTP_STATUS_POLLING;
+  }
+  else
+  {
+    return APP_IP_SERVICE_SNTP_STATUS_DOWN;
+  }
 }
 
 typedef struct {
@@ -59,9 +157,12 @@ THD_FUNCTION(udp_tx_service_thread, arg)
 {
   (void)arg;
 
-  uint8_t *_udp_pbuf_payload_ptr;
+  chRegSetThreadName("udp_tx_service");
 
-  _udp_pbuf_ptr = pbuf_alloc(PBUF_TRANSPORT, (4+1+8), PBUF_REF);
+  uint8_t *_udp_pbuf_payload_ptr;
+  RTCDateTime _datetime;
+
+  _udp_pbuf_ptr = pbuf_alloc(PBUF_TRANSPORT, (4+4+1+8), PBUF_REF);
   _udp_pbuf_payload_ptr = (uint8_t *)_udp_pbuf_ptr->payload;
 
   while(true)
@@ -72,19 +173,21 @@ THD_FUNCTION(udp_tx_service_thread, arg)
     {
       chCondWait(&udp_tx_queue.condition);
     }
-
-    *(uint32_t *)(&_udp_pbuf_payload_ptr[0]) = udp_tx_queue.canFrame.SID;
-    _udp_pbuf_payload_ptr[4] = udp_tx_queue.canFrame.DLC;
-    memcpy(&(_udp_pbuf_payload_ptr[5]), udp_tx_queue.canFrame.data8, 8);
+    *(uint32_t *)(&_udp_pbuf_payload_ptr[4]) = udp_tx_queue.canFrame.SID;
+    _udp_pbuf_payload_ptr[8] = udp_tx_queue.canFrame.DLC;
+    memcpy(&(_udp_pbuf_payload_ptr[9]), udp_tx_queue.canFrame.data8, 8);
 
     udp_tx_queue.waiting = false;
 
     chMtxUnlock(&udp_tx_queue.mutex);
 
-    if(!ip_is_up)
+    if(!_ip_link_is_up)
     {
       continue;
     }
+
+    rtcGetTime(&RTCD1, &_datetime); 
+    *(uint32_t *)(&_udp_pbuf_payload_ptr[0]) = _datetime.millisecond;
 
     tcpip_callback(_udp_tx, NULL);
   }
@@ -164,6 +267,8 @@ static uint32_t udp_rx_commandLength;
 THD_FUNCTION(udp_rx_service_thread, arg)
 {
   (void)arg;
+
+  chRegSetThreadName("udp_rx_service");
 
   /* Set up UDP socket with callback */
   tcpip_callback(_udp_rx_init, NULL);

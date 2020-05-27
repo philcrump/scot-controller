@@ -106,6 +106,8 @@ THD_FUNCTION(can_rx_service_thread, arg)
 {
   (void)arg;
 
+  chRegSetThreadName("can_rx_service");
+
   msg_t result;
   CANRxFrame rxmsg;
 

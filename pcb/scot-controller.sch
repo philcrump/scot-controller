@@ -467,11 +467,11 @@ $EndComp
 Wire Wire Line
 	9900 4350 10550 4350
 Text Label 10550 4350 2    50   ~ 0
-CAN_TXD
+CAN_RXD
 Wire Wire Line
 	9900 4450 10550 4450
 Text Label 10550 4450 2    50   ~ 0
-CAN_RXD
+CAN_TXD
 Wire Wire Line
 	2700 4850 2250 4850
 Wire Wire Line

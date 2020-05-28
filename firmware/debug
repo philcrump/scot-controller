@@ -38,6 +38,17 @@ debug_target() {
     -ex 'compare-sections'
 }
 
+debug_target_st-util() {
+  $flashtool -q \
+    -ex 'file '$binary                          \
+    -ex 'set remote hardware-breakpoint-limit 8'\
+    -ex 'set remote hardware-watchpoint-limit 4'\
+    -ex 'set remotetimeout 10000'               \
+    -ex 'set remote interrupt-on-connect off'   \
+    -ex 'set mem inaccessible-by-default off'   \
+    -ex 'target extended-remote localhost:4242' \
+    -ex 'load '$binary
+}
 
 debug_target_openocd() {
   $flashtool -q \

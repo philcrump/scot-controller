@@ -44,7 +44,7 @@
 #define SNTP_CHECK_RESPONSE             2
 #define SNTP_COMP_ROUNDTRIP             1
 #define SNTP_STARTUP_DELAY              0
-#define SNTP_UPDATE_DELAY               (15*1000)
+#define SNTP_UPDATE_DELAY               (10*60*1000)
 
 #define SNTP_GET_SYSTEM_TIME(sec, us)   do { \
     RTCDateTime timespec_; \

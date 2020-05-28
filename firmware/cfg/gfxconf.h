@@ -335,7 +335,7 @@
 
 //#define GFILE_ALLOW_FLOATS                           GFXOFF
 //#define GFILE_ALLOW_DEVICESPECIFIC                   GFXOFF
-#define GFILE_MAX_GFILES                             4
+#define GFILE_MAX_GFILES                             6
 
 ///////////////////////////////////////////////////////////////////////////
 // GADC                                                                  //

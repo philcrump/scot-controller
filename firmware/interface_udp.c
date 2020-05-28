@@ -98,6 +98,7 @@ THD_FUNCTION(user_ip_services_thread, arg)
         _user_ip_services_running = false;
       }
     }
+    watchdog_feed(WATCHDOG_DOG_USERIPSRVS);
     chThdSleepMilliseconds(100);
   }
 };
@@ -167,22 +168,30 @@ THD_FUNCTION(udp_tx_service_thread, arg)
 
   while(true)
   {
+    watchdog_feed(WATCHDOG_DOG_UDP_TX);
     chMtxLock(&udp_tx_queue.mutex);
 
     while(!udp_tx_queue.waiting)
     {
-      chCondWait(&udp_tx_queue.condition);
+      watchdog_feed(WATCHDOG_DOG_UDP_TX);
+      
+      if(chCondWaitTimeout(&udp_tx_queue.condition, TIME_MS2I(100)) == MSG_TIMEOUT)
+      {
+        /* Re-acquire Mutex */
+        chMtxLock(&udp_tx_queue.mutex);
+      }
     }
+
     *(uint32_t *)(&_udp_pbuf_payload_ptr[4]) = udp_tx_queue.canFrame.SID;
     _udp_pbuf_payload_ptr[8] = udp_tx_queue.canFrame.DLC;
     memcpy(&(_udp_pbuf_payload_ptr[9]), udp_tx_queue.canFrame.data8, 8);
 
     udp_tx_queue.waiting = false;
-
     chMtxUnlock(&udp_tx_queue.mutex);
 
     if(!_ip_link_is_up)
     {
+      /* Discard packet */
       continue;
     }
 
@@ -276,11 +285,18 @@ THD_FUNCTION(udp_rx_service_thread, arg)
   /* Wait for callback to be fired */
   while(true)
   {
+    watchdog_feed(WATCHDOG_DOG_UDP_RX);
     chMtxLock(&udp_rx_queue.mutex);
 
     while(!udp_rx_queue.waiting)
     {
-      chCondWait(&udp_rx_queue.condition);
+      watchdog_feed(WATCHDOG_DOG_UDP_RX);
+
+      if(chCondWaitTimeout(&udp_rx_queue.condition, TIME_MS2I(100)) == MSG_TIMEOUT)
+      {
+        /* Re-acquire Mutex */
+        chMtxLock(&udp_rx_queue.mutex);
+      }
     }
 
     memcpy(udp_rx_commandFrame, udp_rx_queue.commandFrame, udp_rx_queue.commandLength);

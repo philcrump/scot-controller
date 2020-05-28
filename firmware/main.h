@@ -28,19 +28,9 @@
 #include "can.h"
 #include "interface_udp.h"
 #include "app_time.h"
+#include "tracking.h"
+#include "watchdog.h"
 
-/* TODO: Fix this mess */
-extern uint16_t azimuth_raw;
-extern uint16_t elevation_raw;
-extern uint8_t azimuth_fault_raw;
-extern uint8_t elevation_fault_raw;
-extern float azimuth_degrees;
-extern float elevation_degrees;
-
-extern float azimuth_demand_degrees;
-extern float elevation_demand_degrees;
-
-extern float azimuth_error_degrees;
-extern float elevation_error_degrees;
+extern bool app_time_syncing;
 
 #endif /* __MAIN_H__ */

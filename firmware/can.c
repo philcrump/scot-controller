@@ -122,6 +122,6 @@ THD_FUNCTION(can_rx_service_thread, arg)
       can_rx_process(&rxmsg);
     }
 
-    //watchdog_feed(WATCHDOG_DOG_CANRX);
+    watchdog_feed(WATCHDOG_DOG_CANRX);
   }
 }

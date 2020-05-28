@@ -5,7 +5,7 @@
 
 # Compiler options here.
 ifeq ($(USE_OPT),)
-  USE_OPT = -O0 -ggdb -fomit-frame-pointer -falign-functions=16 -specs=nosys.specs
+  USE_OPT = -Og -ggdb -fomit-frame-pointer -falign-functions=16 -specs=nosys.specs
   USE_OPT += -DPORT_IGNORE_GCC_VERSION_CHECK
 endif
 
@@ -136,6 +136,8 @@ CSRC = $(ALLCSRC) \
        can.c \
        interface_udp.c \
        app_time.c \
+       tracking.c \
+       watchdog.c \
        main.c
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

@@ -15,7 +15,7 @@ def signal_handler(signal, frame):
     sys.exit(0)
 signal.signal(signal.SIGINT, signal_handler)
 
-UDP_IP = "10.42.0.254"
+UDP_IP = "192.168.100.194"
 UDP_PORT = 777
 MESSAGE = bytearray(b"BEPISA")
 MESSAGE.extend((SPEED.to_bytes(2, byteorder='little', signed=True)))

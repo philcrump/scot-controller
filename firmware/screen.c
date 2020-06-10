@@ -3,19 +3,16 @@
 #include <math.h>
 #include "chprintf.h"
 extern double atof (const char* str);
+#include <string.h>
 
 #include "gfx.h"
 #include "src/gwin/gwin_keyboard_layout.h"
 
-#include "screen_images/image_network_red_bmp.h"
-#include "screen_images/image_network_amber_bmp.h"
-#include "screen_images/image_network_green_bmp.h"
-
-#include "screen_images/image_clock_red_bmp.h"
-#include "screen_images/image_clock_amber_bmp.h"
-#include "screen_images/image_clock_green_bmp.h"
-
+static font_t font_ui1;
 static font_t font_ui2;
+static font_t font_dejavusans10;
+static font_t font_dejavusans12;
+static font_t font_dejavusans16;
 static font_t font_dejavusans20;
 static font_t font_dejavusans32;
 
@@ -27,17 +24,32 @@ typedef enum {
 
 static screen_state_t screen_state = SCREEN_STATE_DASHBOARD;
 
-static GDisplay* pixmap_azimuth_graphic;
-static GHandle label_azimuth_value;
-static GHandle label_azimuth_demand;
-static GHandle label_azimuth_error;
-static GHandle control_azimuth_button;
+/** Elevation Elements **/
 
 static GDisplay* pixmap_elevation_graphic;
 static GHandle label_elevation_value;
 static GHandle label_elevation_demand;
 static GHandle label_elevation_error;
 static GHandle control_elevation_button;
+
+
+static GDisplay* pixmap_elevation_pwm;
+static GHandle label_elevation_motor_pwm;
+static GDisplay* pixmap_elevation_current;
+static GHandle label_elevation_motor_current;
+
+/** Azimuth Elements **/
+
+static GDisplay* pixmap_azimuth_graphic;
+static GHandle label_azimuth_value;
+static GHandle label_azimuth_demand;
+static GHandle label_azimuth_error;
+static GHandle control_azimuth_button;
+
+static GDisplay* pixmap_azimuth_pwm;
+static GHandle label_azimuth_motor_pwm;
+static GDisplay* pixmap_azimuth_current;
+static GHandle label_azimuth_motor_current;
 
 #define EL_GRAPHIC_ORIGIN_X 80
 #define EL_GRAPHIC_ORIGIN_Y 80
@@ -47,61 +59,8 @@ static GHandle control_elevation_button;
 #define AZ_GRAPHIC_ORIGIN_Y 180
 #define AZ_GRAPHIC_RADIUS   60
 
-static uint32_t screen_ip_link_status = APP_IP_LINK_STATUS_DOWN;
-
-static GHandle screen_image_ethernet_up;
-static GHandle screen_image_ethernet_warn;
-static GHandle screen_image_ethernet_down;
-
-static void screen_draw_ethernet_up(void)
-{
-  gwinHide(screen_image_ethernet_down);
-  gwinHide(screen_image_ethernet_warn);
-  gwinShow(screen_image_ethernet_up);
-}
-
-static void screen_draw_ethernet_warn(void)
-{
-  gwinHide(screen_image_ethernet_up);
-  gwinHide(screen_image_ethernet_down);
-  gwinShow(screen_image_ethernet_warn);
-}
-
-static void screen_draw_ethernet_down(void)
-{
-  gwinHide(screen_image_ethernet_up);
-  gwinHide(screen_image_ethernet_warn);
-  gwinShow(screen_image_ethernet_down);
-}
-
-static uint32_t screen_app_ip_service_sntp_status = APP_IP_SERVICE_SNTP_STATUS_DOWN;
-
-
-static GHandle screen_data_clock;
-static GHandle screen_image_clock_up;
-static GHandle screen_image_clock_polling;
-static GHandle screen_image_clock_down;
-
-static void screen_draw_clock_up(void)
-{
-  gwinHide(screen_image_clock_down);
-  gwinHide(screen_image_clock_polling);
-  gwinShow(screen_image_clock_up);
-}
-
-static void screen_draw_clock_polling(void)
-{
-  gwinHide(screen_image_clock_up);
-  gwinHide(screen_image_clock_down);
-  gwinShow(screen_image_clock_polling);
-}
-
-static void screen_draw_clock_down(void)
-{
-  gwinHide(screen_image_clock_up);
-  gwinHide(screen_image_clock_polling);
-  gwinShow(screen_image_clock_down);
-}
+static GDisplay* pixmap_clock;
+static GHandle label_clock;
 
 static char _screen_clock_string_buffer[32];
 static char *screen_clock_string(void)
@@ -157,103 +116,13 @@ static void widgets_init(void)
   GWidgetInit   wi;
 
   gwinWidgetClearInit(&wi);
-
-  /* Create Azimuth Graphic pixmap */
-
-  pixmap_azimuth_graphic = gdispPixmapCreate(140, 140);
-
-  /* Create "AZ:" label */
-
   gwinSetDefaultStyle(&WhiteWidgetStyle, false);
-  gwinSetDefaultFont(font_dejavusans32);
 
-  wi.g.x = 160;
-  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-65;
-  wi.g.width = 70;
-  wi.g.height = 30;
-  wi.text = "AZ:";
-  wi.customDraw = NULL;
-  wi.g.show = true;
-
-  gwinLabelCreate(NULL, &wi);
- 
-  /* Create Az Value label */
-
-  wi.g.x = 230;
-  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-65;
-  wi.g.width = 110;
-  wi.g.height = 30;
-  wi.text = "---.--";
-  wi.customDraw = gwinLabelDrawJustifiedRight;
-  wi.g.show = true;
- 
-  label_azimuth_value = gwinLabelCreate(NULL, &wi);
-
-  gwinSetDefaultFont(font_dejavusans20);
-
-  /* Create Az "Demand:" label */
-
-  wi.g.x = 160;
-  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-35;
-  wi.g.width = 120;
-  wi.g.height = 25;
-  wi.text = "Demand:";
-  wi.customDraw = NULL;
-  wi.g.show = true;
-
-  gwinLabelCreate(NULL, &wi);
-
-  /* Create Az Demand Value label */
-
-  wi.g.x = 260;
-  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-35;
-  wi.g.width = 80;
-  wi.g.height = 25;
-  wi.text = "---.--";
-  wi.customDraw = gwinLabelDrawJustifiedRight;
-  wi.g.show = true;
- 
-  label_azimuth_demand = gwinLabelCreate(NULL, &wi);
-
- /* Create Az Control button */
-
-  wi.g.x = 350;
-  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-35;
-  wi.g.width = 25;
-  wi.g.height = 25;
-  wi.text = "C";
-  wi.customDraw = NULL;
-  wi.g.show = true;
-
-  control_azimuth_button = gwinButtonCreate(0, &wi);
-
-  /* Create Az "Error" label */
-
-  wi.g.x = 160;
-  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-10;
-  wi.g.width = 100;
-  wi.g.height = 25;
-  wi.text = "-   Error:";
-  wi.customDraw = NULL;
-  wi.g.show = true;
-
-  gwinLabelCreate(NULL, &wi);
-
-  /* Create Az Error value label */
-
-  wi.g.x = 260;
-  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-10;
-  wi.g.width = 80;
-  wi.g.height = 25;
-  wi.text = "---.--";
-  wi.customDraw = gwinLabelDrawJustifiedRight;
-  wi.g.show = true;
- 
-  label_azimuth_error = gwinLabelCreate(NULL, &wi);
-
-  /* Create Elevation Graphic pixmap */
+  /* Create Elevation pixmaps */
 
   pixmap_elevation_graphic = gdispPixmapCreate(140, 90);
+  pixmap_elevation_pwm = gdispPixmapCreate(35, 80);
+  pixmap_elevation_current = gdispPixmapCreate(35, 80);
 
   /* Create "EL:" label */
 
@@ -287,10 +156,10 @@ static void widgets_init(void)
 
   wi.g.x = 160;
   wi.g.y = EL_GRAPHIC_ORIGIN_Y-35;
-  wi.g.width = 120;
+  wi.g.width = 95;
   wi.g.height = 25;
   wi.text = "Demand:";
-  wi.customDraw = NULL;
+  wi.customDraw = gwinLabelDrawJustifiedRight;
   wi.g.show = true;
 
   gwinLabelCreate(NULL, &wi);
@@ -309,10 +178,10 @@ static void widgets_init(void)
 
  /* Create El Control button */
 
-  wi.g.x = 350;
-  wi.g.y = EL_GRAPHIC_ORIGIN_Y-35;
-  wi.g.width = 25;
-  wi.g.height = 25;
+  wi.g.x = 355;
+  wi.g.y = 10;
+  wi.g.width = 30;
+  wi.g.height = 30;
   wi.text = "C";
   wi.customDraw = NULL;
   wi.g.show = true;
@@ -323,10 +192,10 @@ static void widgets_init(void)
 
   wi.g.x = 160;
   wi.g.y = EL_GRAPHIC_ORIGIN_Y-10;
-  wi.g.width = 100;
+  wi.g.width = 95;
   wi.g.height = 25;
-  wi.text = "-   Error:";
-  wi.customDraw = NULL;
+  wi.text = "Error:";
+  wi.customDraw = gwinLabelDrawJustifiedRight;
   wi.g.show = true;
 
   gwinLabelCreate(NULL, &wi);
@@ -343,64 +212,510 @@ static void widgets_init(void)
  
   label_elevation_error = gwinLabelCreate(NULL, &wi);
 
-  /* Ethernet Status Graphic */
-  wi.g.x = 300;
-  wi.g.y = 250;
-  wi.g.width = 21;
-  wi.g.height = 19;
-  wi.text = "-   Error:";
-  wi.customDraw = NULL;
+  /* Create Elevation PWM Label */
 
-  wi.g.show = false;
-  screen_image_ethernet_up = gwinImageCreate(NULL, &wi.g);
-  gwinImageOpenMemory(screen_image_ethernet_up, image_network_green_bmp);
-  gwinImageCache(screen_image_ethernet_up);
+  gwinSetDefaultFont(font_dejavusans10);
 
-  wi.g.show = false;
-  screen_image_ethernet_warn = gwinImageCreate(NULL, &wi.g);
-  gwinImageOpenMemory(screen_image_ethernet_warn, image_network_amber_bmp);
-  gwinImageCache(screen_image_ethernet_warn);
-
+  wi.g.x = 395;
+  wi.g.y = 90;
+  wi.g.width = 35;
+  wi.g.height = 10;
+  wi.text = "Brake";
+  wi.customDraw = gwinLabelDrawJustifiedCenter;
   wi.g.show = true;
-  screen_image_ethernet_down = gwinImageCreate(NULL, &wi.g);
-  gwinImageOpenMemory(screen_image_ethernet_down, image_network_red_bmp);
-  gwinImageCache(screen_image_ethernet_down);
+ 
+  label_elevation_motor_pwm = gwinLabelCreate(NULL, &wi);
 
-  /* RT Clock Status Graphic */
-  wi.g.x = 275;
-  wi.g.y = 250;
-  wi.g.width = 19;
-  wi.g.height = 19;
-  wi.text = "-   Error:";
-  wi.customDraw = NULL;
+  /* Create Elevation Current Label */
 
-  wi.g.show = false;
-  screen_image_clock_up = gwinImageCreate(NULL, &wi.g);
-  gwinImageOpenMemory(screen_image_clock_up, image_clock_green_bmp);
-  gwinImageCache(screen_image_clock_up);
-
-  wi.g.show = false;
-  screen_image_clock_polling = gwinImageCreate(NULL, &wi.g);
-  gwinImageOpenMemory(screen_image_clock_polling, image_clock_amber_bmp);
-  gwinImageCache(screen_image_clock_polling);
-
+  wi.g.x = 435;
+  wi.g.y = 90;
+  wi.g.width = 35;
+  wi.g.height = 10;
+  wi.text = "0.00A";
+  wi.customDraw = gwinLabelDrawJustifiedCenter;
   wi.g.show = true;
-  screen_image_clock_down = gwinImageCreate(NULL, &wi.g);
-  gwinImageOpenMemory(screen_image_clock_down, image_clock_red_bmp);
-  gwinImageCache(screen_image_clock_down);
+ 
+  label_elevation_motor_current = gwinLabelCreate(NULL, &wi);
+
+  /* Create Azimuth pixmaps */
+
+  pixmap_azimuth_graphic = gdispPixmapCreate(140, 140);
+  pixmap_azimuth_pwm = gdispPixmapCreate(35, 80);
+  pixmap_azimuth_current = gdispPixmapCreate(35, 80);
+
+  /* Create "AZ:" label */
+
+  gwinSetDefaultFont(font_dejavusans32);
+
+  wi.g.x = 160;
+  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-65;
+  wi.g.width = 70;
+  wi.g.height = 30;
+  wi.text = "AZ:";
+  wi.customDraw = NULL;
+  wi.g.show = true;
+
+  gwinLabelCreate(NULL, &wi);
+ 
+  /* Create Az Value label */
+
+  wi.g.x = 230;
+  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-65;
+  wi.g.width = 110;
+  wi.g.height = 30;
+  wi.text = "---.--";
+  wi.customDraw = gwinLabelDrawJustifiedRight;
+  wi.g.show = true;
+ 
+  label_azimuth_value = gwinLabelCreate(NULL, &wi);
+
+  gwinSetDefaultFont(font_dejavusans20);
+
+  /* Create Az "Demand:" label */
+
+  wi.g.x = 160;
+  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-35;
+  wi.g.width = 95;
+  wi.g.height = 25;
+  wi.text = "Demand:";
+  wi.customDraw = gwinLabelDrawJustifiedRight;
+  wi.g.show = true;
+
+  gwinLabelCreate(NULL, &wi);
+
+  /* Create Az Demand Value label */
+
+  wi.g.x = 260;
+  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-35;
+  wi.g.width = 80;
+  wi.g.height = 25;
+  wi.text = "---.--";
+  wi.customDraw = gwinLabelDrawJustifiedRight;
+  wi.g.show = true;
+ 
+  label_azimuth_demand = gwinLabelCreate(NULL, &wi);
+
+ /* Create Az Control button */
+
+  wi.g.x = 355;
+  wi.g.y = 110;
+  wi.g.width = 30;
+  wi.g.height = 30;
+  wi.text = "C";
+  wi.customDraw = NULL;
+  wi.g.show = true;
+
+  control_azimuth_button = gwinButtonCreate(0, &wi);
+
+  /* Create Az "Error" label */
+
+  wi.g.x = 160;
+  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-10;
+  wi.g.width = 95;
+  wi.g.height = 25;
+  wi.text = "Error:";
+  wi.customDraw = gwinLabelDrawJustifiedRight;
+  wi.g.show = true;
+
+  gwinLabelCreate(NULL, &wi);
+
+  /* Create Az Error value label */
+
+  wi.g.x = 260;
+  wi.g.y = AZ_GRAPHIC_ORIGIN_Y-10;
+  wi.g.width = 80;
+  wi.g.height = 25;
+  wi.text = "---.--";
+  wi.customDraw = gwinLabelDrawJustifiedRight;
+  wi.g.show = true;
+ 
+  label_azimuth_error = gwinLabelCreate(NULL, &wi);
+
+  /* Create Azimuth PWM Label */
+
+  gwinSetDefaultFont(font_dejavusans10);
+
+  wi.g.x = 395;
+  wi.g.y = 190;
+  wi.g.width = 35;
+  wi.g.height = 10;
+  wi.text = "Brake";
+  wi.customDraw = gwinLabelDrawJustifiedCenter;
+  wi.g.show = true;
+ 
+  label_azimuth_motor_pwm = gwinLabelCreate(NULL, &wi);
+
+  /* Create Azimuth Current Label */
+
+  wi.g.x = 435;
+  wi.g.y = 190;
+  wi.g.width = 35;
+  wi.g.height = 10;
+  wi.text = "0.00A";
+  wi.customDraw = gwinLabelDrawJustifiedCenter;
+  wi.g.show = true;
+ 
+  label_azimuth_motor_current = gwinLabelCreate(NULL, &wi);
 
   /* Clock Data */
+  pixmap_clock = gdispPixmapCreate(150, 20);
+
   gwinSetDefaultFont(font_ui2);
-  wi.g.x = 110;
-  wi.g.y = 250;
+  wi.g.x = 0;
+  wi.g.y = 0;
   wi.g.width = 150;
   wi.g.height = 20;
   wi.text = "";
   wi.customDraw = NULL;
 
   wi.g.show = true;
-  screen_data_clock = gwinLabelCreate(NULL, &wi);
+  label_clock = gwinGLabelCreate(pixmap_clock, NULL, &wi);
 }
+
+
+static float screen_dashboard_elevation_degrees_last = -999.9;
+static char screen_dashboard_elevation_string[14];
+static color_t screen_dashboard_elevation_limit1_color;
+static color_t screen_dashboard_elevation_limit2_color;
+void screen_dashboard_elevation_draw(bool force_redraw)
+{
+  if(!force_redraw && elevation_degrees == screen_dashboard_elevation_degrees_last)
+  {
+    return;
+  }
+  screen_dashboard_elevation_degrees_last = elevation_degrees;
+
+  gdispGFillArea(pixmap_elevation_graphic, 0, 0, 140, 90, White);
+
+  gdispGDrawArc(pixmap_elevation_graphic, 70, 70, EL_GRAPHIC_RADIUS, 58, 180+15, Black);
+  gdispGDrawLine(pixmap_elevation_graphic, 70, 70, 70, 70-(EL_GRAPHIC_RADIUS+10), Black);
+  gdispGDrawLine(pixmap_elevation_graphic, 70+(20), 70, 70-(EL_GRAPHIC_RADIUS+10), 70, Black);
+
+  if(tracking_elevation_local_control || tracking_elevation_remote_control)
+  { 
+    gdispGDrawThickLine(
+      pixmap_elevation_graphic,
+      70,
+      70,
+      70 - (EL_GRAPHIC_RADIUS * cos(DEG2RAD(elevation_demand_degrees))),
+      70 - (EL_GRAPHIC_RADIUS * sin(DEG2RAD(elevation_demand_degrees))),
+      Lime, 3, false
+    );
+  }
+
+  gdispGDrawThickLine(
+    pixmap_elevation_graphic,
+    70,
+    70,
+    70 - (EL_GRAPHIC_RADIUS * cos(DEG2RAD(elevation_degrees))),
+    70 - (EL_GRAPHIC_RADIUS * sin(DEG2RAD(elevation_degrees))),
+    Red, 3, false
+  );
+
+  /* Upper Limit Switch Status */
+  gdispGFillRoundedBox(
+    pixmap_elevation_graphic,
+    100, 5,
+    9, 9,
+    2,
+    screen_dashboard_elevation_limit1_color 
+  );
+
+  /* Lower Limit Switch Status */
+  gdispGFillRoundedBox(
+    pixmap_elevation_graphic,
+    0, 81,
+    9, 9,
+    2,
+    screen_dashboard_elevation_limit2_color 
+  );
+
+  gdispBlitArea(EL_GRAPHIC_ORIGIN_X-(EL_GRAPHIC_RADIUS+10), EL_GRAPHIC_ORIGIN_Y-(EL_GRAPHIC_RADIUS+10), 140, 90, gdispPixmapGetBits(pixmap_elevation_graphic));
+
+  chsnprintf(screen_dashboard_elevation_string, 13, "%.2f", (elevation_degrees < 180) ? elevation_degrees : (elevation_degrees - 360));
+  gwinSetText(label_elevation_value, screen_dashboard_elevation_string, true);
+
+  chsnprintf(screen_dashboard_elevation_string, 13, "%.2f", elevation_demand_degrees);
+  gwinSetText(label_elevation_demand, screen_dashboard_elevation_string, true);
+
+  chsnprintf(screen_dashboard_elevation_string, 13, "%.2f", elevation_error_degrees);
+  gwinSetText(label_elevation_error, screen_dashboard_elevation_string, true);
+}
+
+static limit_t screen_dashboard_elevation_limit1_last;
+static void screen_dashboard_elevation_limit1_draw(bool force_redraw)
+{
+  if(!force_redraw && (el_limit_1 == screen_dashboard_elevation_limit1_last))
+  {
+    return;
+  }
+
+  if(el_limit_1 == LIMIT_OK)
+  {
+    /* OK */
+    screen_dashboard_elevation_limit1_color = Lime;
+  }
+  else if(el_limit_1 == LIMIT_HALT)
+  {
+    /* Hit Switch */
+    screen_dashboard_elevation_limit1_color = Red;
+  }
+  else // if(el_limit_1 == LIMIT_UNKNOWN)
+  {
+    /* Unknown! */
+    screen_dashboard_elevation_limit1_color = Purple;
+  }
+
+  /* Upper Limit Switch Status */
+  gdispGFillRoundedBox(
+    pixmap_elevation_graphic,
+    100, 5,
+    9, 9,
+    2,
+    screen_dashboard_elevation_limit1_color 
+  );
+
+  gdispBlitArea(EL_GRAPHIC_ORIGIN_X-(EL_GRAPHIC_RADIUS+10), EL_GRAPHIC_ORIGIN_Y-(EL_GRAPHIC_RADIUS+10), 140, 90, gdispPixmapGetBits(pixmap_elevation_graphic));
+
+  screen_dashboard_elevation_limit1_last = el_limit_1;
+}
+
+static limit_t screen_dashboard_elevation_limit2_last;
+static void screen_dashboard_elevation_limit2_draw(bool force_redraw)
+{
+  if(!force_redraw && (el_limit_2 == screen_dashboard_elevation_limit2_last))
+  {
+    return;
+  }
+
+  if(el_limit_2 == LIMIT_OK)
+  {
+    /* OK */
+    screen_dashboard_elevation_limit2_color = Lime;
+  }
+  else if(el_limit_2 == LIMIT_HALT)
+  {
+    /* Hit Switch */
+    screen_dashboard_elevation_limit2_color = Red;
+  }
+  else // if(el_limit_2 == LIMIT_UNKNOWN)
+  {
+    /* Unknown! */
+    screen_dashboard_elevation_limit2_color = Purple;
+  }
+
+  /* Lower Limit Switch Status */
+  gdispGFillRoundedBox(
+    pixmap_elevation_graphic,
+    0, 81,
+    9, 9,
+    2,
+    screen_dashboard_elevation_limit2_color 
+  );
+  
+  gdispBlitArea(EL_GRAPHIC_ORIGIN_X-(EL_GRAPHIC_RADIUS+10), EL_GRAPHIC_ORIGIN_Y-(EL_GRAPHIC_RADIUS+10), 140, 90, gdispPixmapGetBits(pixmap_elevation_graphic));
+
+  screen_dashboard_elevation_limit2_last = el_limit_2;
+}
+
+static tracking_control_t screen_dashboard_elevation_control_last;
+void screen_dashboard_elevation_control_draw(bool force_redraw)
+{
+  if(!force_redraw && (control_elevation == screen_dashboard_elevation_control_last))
+  {
+    return;
+  }
+
+  static color_t l_pos_color;
+  static color_t r_pos_color;
+  static color_t r_mot_color;
+
+  if(control_elevation == CONTROL_LOCAL_POSITION)
+  {
+    l_pos_color = Lime;
+    r_pos_color = Grey;
+    r_mot_color = Grey;
+  }
+  else if(control_elevation == CONTROL_REMOTE_POSITION)
+  {
+    l_pos_color = Grey;
+    r_pos_color = Lime;
+    r_mot_color = Grey;
+  }
+  else if(control_elevation == CONTROL_REMOTE_MOTOR)
+  {
+    l_pos_color = Grey;
+    r_pos_color = Grey;
+    r_mot_color = Lime;
+  }
+  else // Shouldn't be here, but worth indicating if so
+  {
+    l_pos_color = Grey;
+    r_pos_color = Grey;
+    r_mot_color = Grey;
+  }
+
+  /* Local - Position */
+  gdispFillRoundedBox(
+    350, 45,
+    40, 15,
+    2,
+    l_pos_color
+  );
+  gdispDrawStringBox(
+    350, 45,
+    40, 15,
+    "L-Pos",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  /* Remote - Position */
+  gdispFillRoundedBox(
+    350, 65,
+    40, 15,
+    2,
+    r_pos_color
+  );
+  gdispDrawStringBox(
+    350, 65,
+    40, 15,
+    "R-Pos",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  /* Remote - Motor */
+  gdispFillRoundedBox(
+    350, 85,
+    40, 15,
+    2,
+    r_mot_color
+  );
+  gdispDrawStringBox(
+    350, 85,
+    40, 15,
+    "R-Mot",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  screen_dashboard_elevation_control_last = control_elevation;
+}
+
+static int16_t screen_dashboard_elevation_pwm_last = 0;
+static char screen_dashboard_elevation_pwm_string[8];
+static int32_t screen_dashboard_elevation_pwm_percent;
+void screen_dashboard_elevation_pwm_draw(bool force_redraw)
+{
+  if(!force_redraw && (elevation_pwm == screen_dashboard_elevation_pwm_last))
+  {
+    return;
+  }
+
+  screen_dashboard_elevation_pwm_percent = (100 * (int32_t)elevation_pwm) / 1024;
+
+  /* El PWM bargraph box */
+  gdispGDrawBox(
+    pixmap_elevation_pwm,
+    0, 0,
+    35, 80,
+    Black
+  );
+
+  /* Blank out box */
+  gdispGFillArea(
+    pixmap_elevation_pwm,
+    1, 1,
+    33, 78,
+    White
+  );
+
+  /* Draw center line */
+  gdispGDrawLine(pixmap_elevation_pwm, 1, 40, 34, 40, Black);
+
+  if(elevation_pwm > 0)
+  {
+    gdispGFillArea(
+      pixmap_elevation_pwm,
+      2, 40-((39*screen_dashboard_elevation_pwm_percent)/100),
+      31, ((39*screen_dashboard_elevation_pwm_percent)/100),
+      Orange
+    );
+    chsnprintf(screen_dashboard_elevation_pwm_string, 7, "%+d%%", screen_dashboard_elevation_pwm_percent);
+  }
+  else if(elevation_pwm < 0)
+  {
+    gdispGFillArea(
+      pixmap_elevation_pwm,
+      2, 40,
+      31, ((-1*39*screen_dashboard_elevation_pwm_percent)/100),
+      Orange
+    );
+    chsnprintf(screen_dashboard_elevation_pwm_string, 7, "%+d%%", screen_dashboard_elevation_pwm_percent);
+  }
+  else
+  {
+    strcpy(screen_dashboard_elevation_pwm_string, "Brake");
+  }
+
+  gdispBlitArea(395, 10, 35, 80, gdispPixmapGetBits(pixmap_elevation_pwm));
+
+  gwinSetText(label_elevation_motor_pwm, screen_dashboard_elevation_pwm_string, false);
+
+  screen_dashboard_elevation_pwm_last = elevation_pwm;
+}
+
+static int16_t screen_dashboard_elevation_current_last = 0;
+static char screen_dashboard_elevation_current_string[8];
+static int32_t screen_dashboard_elevation_current_milliamps;
+void screen_dashboard_elevation_current_draw(bool force_redraw)
+{
+  if(!force_redraw && (elevation_current == screen_dashboard_elevation_current_last))
+  {
+    return;
+  }
+
+  screen_dashboard_elevation_current_milliamps = 1.25 * (int32_t)elevation_current;
+
+  /* El Current bargraph box */
+  gdispGDrawBox(
+    pixmap_elevation_current,
+    0, 0,
+    35, 80,
+    Black
+  );
+
+  /* Blank out box */
+  gdispGFillArea(
+    pixmap_elevation_current,
+    1, 1,
+    33, 78,
+    White
+  );
+
+  /* El Current Value */
+  gdispGFillArea(
+    pixmap_elevation_current,
+    2, 79-((78*screen_dashboard_elevation_current_milliamps)/4000),
+    31, ((78*screen_dashboard_elevation_current_milliamps)/4000),
+    Red
+  );
+
+  gdispBlitArea(435, 10, 35, 80, gdispPixmapGetBits(pixmap_elevation_current));
+
+  chsnprintf(screen_dashboard_elevation_current_string, 7, "%.2fA", (float)screen_dashboard_elevation_current_milliamps/1000);
+
+  gwinSetText(label_elevation_motor_current, screen_dashboard_elevation_current_string, false);
+
+  screen_dashboard_elevation_current_last = elevation_current;
+}
+
+/*** Azimuth Elements Draw Methods ***/
 
 static float graphic_azimuth_degrees_last = -999.9;
 static char text_azimuth_string[14];
@@ -422,6 +737,7 @@ void screen_dashboard_azimuth_draw(bool force_redraw)
     70,
     Black
   );
+
   gdispGDrawLine(
     pixmap_azimuth_graphic,
     70,
@@ -430,13 +746,25 @@ void screen_dashboard_azimuth_draw(bool force_redraw)
     70 - (AZ_GRAPHIC_RADIUS + 10),
     Black
   );
-  float azimuth_line_radians = DEG2RAD(azimuth_degrees + 90);
+
+  if(tracking_azimuth_local_control || tracking_azimuth_remote_control)
+  { 
+    gdispGDrawThickLine(
+      pixmap_azimuth_graphic,
+      70,
+      70,
+      70 - (AZ_GRAPHIC_RADIUS * cos(DEG2RAD(azimuth_demand_degrees + 90))),
+      70 - (AZ_GRAPHIC_RADIUS * sin(DEG2RAD(azimuth_demand_degrees + 90))),
+      Lime, 3, false
+    );
+  }
+
   gdispGDrawThickLine(
     pixmap_azimuth_graphic,
     70,
     70,
-    70 - (AZ_GRAPHIC_RADIUS * cos(azimuth_line_radians)),
-    70 - (AZ_GRAPHIC_RADIUS * sin(azimuth_line_radians)),
+    70 - (AZ_GRAPHIC_RADIUS * cos(DEG2RAD(azimuth_degrees + 90))),
+    70 - (AZ_GRAPHIC_RADIUS * sin(DEG2RAD(azimuth_degrees + 90))),
     Red, 3, false
   );
   gdispBlitArea(AZ_GRAPHIC_ORIGIN_X-70, AZ_GRAPHIC_ORIGIN_Y-70, 140, 140, gdispPixmapGetBits(pixmap_azimuth_graphic));
@@ -451,41 +779,566 @@ void screen_dashboard_azimuth_draw(bool force_redraw)
   gwinSetText(label_azimuth_error, text_azimuth_string, true);
 }
 
-static float screen_dashboard_elevation_degrees_last = -999.9;
-static char screen_dashboard_elevation_string[14];
-void screen_dashboard_elevation_draw(bool force_redraw)
+static tracking_control_t screen_dashboard_azimuth_control_last;
+void screen_dashboard_azimuth_control_draw(bool force_redraw)
 {
-  if(!force_redraw && elevation_degrees == screen_dashboard_elevation_degrees_last)
+  if(!force_redraw && (control_azimuth == screen_dashboard_azimuth_control_last))
   {
     return;
   }
-  screen_dashboard_elevation_degrees_last = elevation_degrees;
 
-  gdispGFillArea(pixmap_elevation_graphic, 0, 0, 140, 90, White);
+  static color_t l_pos_color;
+  static color_t r_pos_color;
+  static color_t r_mot_color;
 
-  gdispGDrawArc(pixmap_elevation_graphic, 70, 70, EL_GRAPHIC_RADIUS, 50, 180+15, Black);
-  gdispGDrawLine(pixmap_elevation_graphic, 70, 70, 70, 70-(EL_GRAPHIC_RADIUS+10), Black);
-  gdispGDrawLine(pixmap_elevation_graphic, 70+(EL_GRAPHIC_RADIUS+10), 70, 70-(EL_GRAPHIC_RADIUS+10), 70, Black);
+  if(control_azimuth == CONTROL_LOCAL_POSITION)
+  {
+    l_pos_color = Lime;
+    r_pos_color = Grey;
+    r_mot_color = Grey;
+  }
+  else if(control_azimuth == CONTROL_REMOTE_POSITION)
+  {
+    l_pos_color = Grey;
+    r_pos_color = Lime;
+    r_mot_color = Grey;
+  }
+  else if(control_azimuth == CONTROL_REMOTE_MOTOR)
+  {
+    l_pos_color = Grey;
+    r_pos_color = Grey;
+    r_mot_color = Lime;
+  }
+  else // Shouldn't be here, but worth indicating if so
+  {
+    l_pos_color = Grey;
+    r_pos_color = Grey;
+    r_mot_color = Grey;
+  }
 
-  gdispGDrawThickLine(
-    pixmap_elevation_graphic,
-    70,
-    70,
-    70 - (EL_GRAPHIC_RADIUS * cos(DEG2RAD(elevation_degrees))),
-    70 - (EL_GRAPHIC_RADIUS * sin(DEG2RAD(elevation_degrees))),
-    Red, 3, false
+  /* Local - Position */
+  gdispFillRoundedBox(
+    350, 145,
+    40, 15,
+    2,
+    l_pos_color
+  );
+  gdispDrawStringBox(
+    350, 145,
+    40, 15,
+    "L-Pos",
+    font_dejavusans12,
+    Black,
+    justifyCenter
   );
 
-  gdispBlitArea(EL_GRAPHIC_ORIGIN_X-(EL_GRAPHIC_RADIUS+10), EL_GRAPHIC_ORIGIN_Y-(EL_GRAPHIC_RADIUS+10), 140, 90, gdispPixmapGetBits(pixmap_elevation_graphic));
+  /* Remote - Position */
+  gdispFillRoundedBox(
+    350, 165,
+    40, 15,
+    2,
+    r_pos_color
+  );
+  gdispDrawStringBox(
+    350, 165,
+    40, 15,
+    "R-Pos",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
 
-  chsnprintf(screen_dashboard_elevation_string, 13, "%.2f", elevation_degrees);
-  gwinSetText(label_elevation_value, screen_dashboard_elevation_string, true);
+  /* Remote - Motor */
+  gdispFillRoundedBox(
+    350, 185,
+    40, 15,
+    2,
+    r_mot_color
+  );
+  gdispDrawStringBox(
+    350, 185,
+    40, 15,
+    "R-Mot",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
 
-  chsnprintf(screen_dashboard_elevation_string, 13, "%.2f", elevation_demand_degrees);
-  gwinSetText(label_elevation_demand, screen_dashboard_elevation_string, true);
+  screen_dashboard_azimuth_control_last = control_azimuth;
+}
 
-  chsnprintf(screen_dashboard_elevation_string, 13, "%.2f", elevation_error_degrees);
-  gwinSetText(label_elevation_error, screen_dashboard_elevation_string, true);
+static int16_t screen_dashboard_azimuth_pwm_last = 0;
+static char screen_dashboard_azimuth_pwm_string[8];
+static int32_t screen_dashboard_azimuth_pwm_percent;
+void screen_dashboard_azimuth_pwm_draw(bool force_redraw)
+{
+  if(!force_redraw && (azimuth_pwm == screen_dashboard_azimuth_pwm_last))
+  {
+    return;
+  }
+
+  screen_dashboard_azimuth_pwm_percent = (100 * (int32_t)azimuth_pwm) / 1024;
+
+  /* Az PWM bargraph box */
+  gdispGDrawBox(
+    pixmap_azimuth_pwm,
+    0, 0,
+    35, 80,
+    Black
+  );
+
+  /* Blank out box */
+  gdispGFillArea(
+    pixmap_azimuth_pwm,
+    1, 1,
+    33, 78,
+    White
+  );
+
+  /* Draw center line */
+  gdispGDrawLine(pixmap_azimuth_pwm, 1, 40, 34, 40, Black);
+
+  if(azimuth_pwm > 0)
+  {
+    gdispGFillArea(
+      pixmap_azimuth_pwm,
+      2, 40-((39*screen_dashboard_azimuth_pwm_percent)/100),
+      31, ((39*screen_dashboard_azimuth_pwm_percent)/100),
+      Orange
+    );
+    chsnprintf(screen_dashboard_azimuth_pwm_string, 7, "%+d%%", screen_dashboard_azimuth_pwm_percent);
+  }
+  else if(azimuth_pwm < 0)
+  {
+    gdispGFillArea(
+      pixmap_azimuth_pwm,
+      2, 41,
+      31, ((-1*39*screen_dashboard_azimuth_pwm_percent)/100),
+      Orange
+    );
+    chsnprintf(screen_dashboard_azimuth_pwm_string, 7, "%+d%%", screen_dashboard_azimuth_pwm_percent);
+  }
+  else
+  {
+    strcpy(screen_dashboard_azimuth_pwm_string, "Brake");
+  }
+
+  gdispBlitArea(395, 110, 35, 80, gdispPixmapGetBits(pixmap_azimuth_pwm));
+
+  gwinSetText(label_azimuth_motor_pwm, screen_dashboard_azimuth_pwm_string, false);
+
+  screen_dashboard_azimuth_pwm_last = azimuth_pwm;
+}
+
+static int16_t screen_dashboard_azimuth_current_last = 0;
+static char screen_dashboard_azimuth_current_string[8];
+static int32_t screen_dashboard_azimuth_current_milliamps;
+void screen_dashboard_azimuth_current_draw(bool force_redraw)
+{
+  if(!force_redraw && (azimuth_current == screen_dashboard_azimuth_current_last))
+  {
+    return;
+  }
+
+  screen_dashboard_azimuth_current_milliamps = 1.25 * (int32_t)azimuth_current;
+
+  /* Az Current bargraph box */
+  gdispGDrawBox(
+    pixmap_azimuth_current,
+    0, 0,
+    35, 80,
+    Black
+  );
+
+  /* Blank out box */
+  gdispGFillArea(
+    pixmap_azimuth_current,
+    1, 1,
+    33, 78,
+    White
+  );
+
+  /* Az Current Value */
+  gdispGFillArea(
+    pixmap_azimuth_current,
+    2, 79-((78*screen_dashboard_azimuth_current_milliamps)/4000),
+    31, ((78*screen_dashboard_azimuth_current_milliamps)/4000),
+    Red
+  );
+
+  gdispBlitArea(435, 110, 35, 80, gdispPixmapGetBits(pixmap_azimuth_current));
+
+  chsnprintf(screen_dashboard_azimuth_current_string, 7, "%.2fA", (float)screen_dashboard_azimuth_current_milliamps/1000);
+
+  gwinSetText(label_azimuth_motor_current, screen_dashboard_azimuth_current_string, false);
+
+  screen_dashboard_azimuth_current_last = azimuth_current;
+}
+
+/*** System Boxes ***/
+static remotedevice_t screen_dashboard_device_elresolver_last;
+static void screen_dashboard_device_elresolver_draw(bool force_redraw)
+{
+  if(!force_redraw && (device_elresolver == screen_dashboard_device_elresolver_last))
+  {
+    return;
+  }
+
+  static color_t screen_dashboard_device_elresolver_color;
+
+  if(device_elresolver == DEVICE_OK)
+  {
+    /* OK */
+    screen_dashboard_device_elresolver_color = Lime;
+  }
+  else if(device_elresolver == DEVICE_FAULT)
+  {
+    /* Fault */
+    screen_dashboard_device_elresolver_color = Red;
+  }
+  else // if(device_elresolver == DEVICE_UNKNOWN)
+  {
+    /* Unknown! */
+    screen_dashboard_device_elresolver_color = Purple;
+  }
+
+  gdispFillRoundedBox(
+    160, 210,
+    90, 15,
+    2,
+    screen_dashboard_device_elresolver_color
+  );
+  gdispDrawStringBox(
+    160, 210,
+    90, 15,
+    "EL Resolver",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  screen_dashboard_device_elresolver_last = device_elresolver;
+}
+
+static remotedevice_t screen_dashboard_device_azresolver_last;
+static void screen_dashboard_device_azresolver_draw(bool force_redraw)
+{
+  if(!force_redraw && (device_azresolver == screen_dashboard_device_azresolver_last))
+  {
+    return;
+  }
+
+  static color_t screen_dashboard_device_azresolver_color;
+
+  if(device_azresolver == DEVICE_OK)
+  {
+    /* OK */
+    screen_dashboard_device_azresolver_color = Lime;
+  }
+  else if(device_azresolver == DEVICE_FAULT)
+  {
+    /* Fault */
+    screen_dashboard_device_azresolver_color = Red;
+  }
+  else // if(device_azresolver == DEVICE_UNKNOWN)
+  {
+    /* Unknown! */
+    screen_dashboard_device_azresolver_color = Purple;
+  }
+
+  gdispFillRoundedBox(
+    160, 230,
+    90, 15,
+    2,
+    screen_dashboard_device_azresolver_color
+  );
+  gdispDrawStringBox(
+    160, 230,
+    90, 15,
+    "AZ Resolver",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  screen_dashboard_device_azresolver_last = device_azresolver;
+}
+
+static remotedevice_t screen_dashboard_device_elmotor_last;
+static void screen_dashboard_device_elmotor_draw(bool force_redraw)
+{
+  if(!force_redraw && (device_elmotor == screen_dashboard_device_elmotor_last))
+  {
+    return;
+  }
+
+  static color_t screen_dashboard_device_elmotor_color;
+
+  if(device_elmotor == DEVICE_OK)
+  {
+    /* OK */
+    screen_dashboard_device_elmotor_color = Lime;
+  }
+  else if(device_elmotor == DEVICE_FAULT)
+  {
+    /* Fault */
+    screen_dashboard_device_elmotor_color = Red;
+  }
+  else if(device_elmotor == DEVICE_INACTIVE)
+  {
+    /* Inactive (control timed out) */
+    screen_dashboard_device_elmotor_color = Grey;
+  }
+  else // if(device_elmotor == DEVICE_UNKNOWN)
+  {
+    /* Unknown! */
+    screen_dashboard_device_elmotor_color = Purple;
+  }
+
+  gdispFillRoundedBox(
+    270, 210,
+    90, 15,
+    2,
+    screen_dashboard_device_elmotor_color
+  );
+  gdispDrawStringBox(
+    270, 210,
+    90, 15,
+    "EL Motor",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  screen_dashboard_device_elmotor_last = device_elmotor;
+}
+
+static remotedevice_t screen_dashboard_device_azmotor_last;
+static void screen_dashboard_device_azmotor_draw(bool force_redraw)
+{
+  if(!force_redraw && (device_azmotor == screen_dashboard_device_azmotor_last))
+  {
+    return;
+  }
+
+  static color_t screen_dashboard_device_azmotor_color;
+
+  if(device_azmotor == DEVICE_OK)
+  {
+    /* OK */
+    screen_dashboard_device_azmotor_color = Lime;
+  }
+  else if(device_azmotor == DEVICE_FAULT)
+  {
+    /* Fault */
+    screen_dashboard_device_azmotor_color = Red;
+  }
+  else if(device_azmotor == DEVICE_INACTIVE)
+  {
+    /* Inactive (control timed out) */
+    screen_dashboard_device_azmotor_color = Grey;
+  }
+  else // if(device_azmotor == DEVICE_UNKNOWN)
+  {
+    /* Unknown! */
+    screen_dashboard_device_azmotor_color = Purple;
+  }
+
+  gdispFillRoundedBox(
+    270, 230,
+    90, 15,
+    2,
+    screen_dashboard_device_azmotor_color
+  );
+  gdispDrawStringBox(
+    270, 230,
+    90, 15,
+    "AZ Motor",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  screen_dashboard_device_azmotor_last = device_azmotor;
+}
+
+static estop_t screen_dashboard_estop_last;
+static void screen_dashboard_draw_estop(bool force_redraw)
+{
+  if(!force_redraw && (estop == screen_dashboard_estop_last))
+  {
+    return;
+  }
+
+  static color_t screen_dashboard_estop_color;
+
+  if(estop == ESTOP_OK)
+  {
+    /* OK */
+    screen_dashboard_estop_color = Lime;
+  }
+  else if(estop == ESTOP_HALT)
+  {
+    /* ESTOP! */
+    screen_dashboard_estop_color = Red;
+  }
+  else // if(estop == ESTOP_UNKNOWN)
+  {
+    /* Unknown */
+    screen_dashboard_estop_color = Purple;
+  }
+
+  /* ESTOP Box */
+  gdispFillRoundedBox(
+    380, 210,
+    90, 35,
+    2,
+    screen_dashboard_estop_color
+  );
+
+  gdispDrawStringBox(
+    380, 210,
+    90, 35,
+    "E-STOP",
+    font_dejavusans16,
+    Black,
+    justifyCenter
+  );
+
+  screen_dashboard_estop_last = estop;
+}
+
+static uint32_t screen_dashboard_network_last;
+static void screen_dashboard_network_draw(bool force_redraw)
+{
+  if(!force_redraw && (app_ip_link_status() == screen_dashboard_network_last))
+  {
+    return;
+  }
+
+  static color_t screen_dashboard_network_color;
+
+  if(app_ip_link_status() == APP_IP_LINK_STATUS_DOWN)
+  {
+    /* No Link */
+    screen_dashboard_network_color = Red;
+  }
+  else if(app_ip_link_status() == APP_IP_LINK_STATUS_UPBUTNOIP)
+  {
+    /* Link but no IP */
+    screen_dashboard_network_color = Grey;
+  }
+  else if(app_ip_link_status() == APP_IP_LINK_STATUS_BOUND)
+  {
+    /* Link & IP */
+    screen_dashboard_network_color = Lime;
+  }
+
+  /* Network Box */
+  gdispFillRoundedBox(
+    160, 250,
+    90, 15,
+    2,
+    screen_dashboard_network_color
+  );
+  gdispDrawStringBox(
+    160, 250,
+    90, 15,
+    "Network",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  screen_dashboard_network_last = app_ip_link_status();
+}
+
+static uint32_t screen_dashboard_timesync_last;
+static void screen_dashboard_timesync_draw(bool force_redraw)
+{
+  if(!force_redraw && (app_ip_service_sntp_status() == screen_dashboard_timesync_last))
+  {
+    return;
+  }
+
+  static color_t screen_dashboard_timesync_color;
+
+  if(app_ip_service_sntp_status() == APP_IP_SERVICE_SNTP_STATUS_DOWN)
+  {
+    /* No NTP Reachable */
+    screen_dashboard_timesync_color = Red;
+  }
+  else if(app_ip_service_sntp_status() == APP_IP_SERVICE_SNTP_STATUS_POLLING)
+  {
+    /* NTP reached, syncing system clock */
+    screen_dashboard_timesync_color = Grey;
+  }
+  else if(app_ip_service_sntp_status() == APP_IP_SERVICE_SNTP_STATUS_SYNCED)
+  {
+    /* NTP reached, system clock synced */
+    screen_dashboard_timesync_color = Lime;
+  }
+
+  /* Time Sync Box */
+  gdispFillRoundedBox(
+    270, 250,
+    90, 15,
+    2,
+    screen_dashboard_timesync_color
+  );
+  gdispDrawStringBox(
+    270, 250,
+    90, 15,
+    "Time Sync",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
+
+  screen_dashboard_timesync_last = app_ip_service_sntp_status();
+}
+
+static void screen_dashboard_clock_draw(void)
+{
+  gwinSetText(label_clock, screen_clock_string(), true);
+
+  gdispBlitArea(5, 251, 150, 20, gdispPixmapGetBits(pixmap_clock));
+}
+
+static void screen_dashboard_drawall(bool force_redraw)
+{
+  if(force_redraw)
+  {
+    /* El/Az divider line */
+    gdispDrawLine(20, 105, 460, 105, HTML2COLOR(0xC0C0C0));
+      
+    /* Az/System divider line */
+    gdispDrawLine(160, 205, 470, 205, HTML2COLOR(0xC0C0C0));
+
+    gdispDrawStringBox(370, 250, 108, 20, "Phil Crump M0DNY", font_ui2, Black, justifyLeft);
+  }
+
+  screen_dashboard_elevation_draw(force_redraw);
+  screen_dashboard_elevation_limit1_draw(force_redraw);
+  screen_dashboard_elevation_limit2_draw(force_redraw);
+  screen_dashboard_elevation_control_draw(force_redraw);
+  screen_dashboard_elevation_pwm_draw(force_redraw);
+  screen_dashboard_elevation_current_draw(force_redraw);
+
+  screen_dashboard_azimuth_draw(force_redraw);
+  screen_dashboard_azimuth_control_draw(force_redraw);
+  screen_dashboard_azimuth_pwm_draw(force_redraw);
+  screen_dashboard_azimuth_current_draw(force_redraw);
+
+  screen_dashboard_device_elresolver_draw(force_redraw);
+  screen_dashboard_device_azresolver_draw(force_redraw);
+  screen_dashboard_device_elmotor_draw(force_redraw);
+  screen_dashboard_device_azmotor_draw(force_redraw);
+  screen_dashboard_network_draw(force_redraw);
+  screen_dashboard_timesync_draw(force_redraw);
+  screen_dashboard_draw_estop(force_redraw);
+
+  screen_dashboard_clock_draw();
 }
 
 static GListener screen_keyboard_glistener;
@@ -506,18 +1359,17 @@ THD_FUNCTION(screen_service_thread, arg)
   watchdog_feed(WATCHDOG_DOG_SCREEN);
 
   /* Set up fonts */
+  font_ui1 = gdispOpenFont("UI1");
   font_ui2 = gdispOpenFont("UI2");
+  font_dejavusans10 = gdispOpenFont("DejaVuSans10");
+  font_dejavusans12 = gdispOpenFont("DejaVuSans12");
+  font_dejavusans16 = gdispOpenFont("DejaVuSans16");
   font_dejavusans20 = gdispOpenFont("DejaVuSans20");
   font_dejavusans32 = gdispOpenFont("DejaVuSans32");
 
   widgets_init();
 
-  screen_dashboard_elevation_draw(true);
-  screen_dashboard_azimuth_draw(true);
-  /* Grey divider */
-  gdispDrawLine(20, 105, 460, 105, HTML2COLOR(0xC0C0C0));
-
-  gdispDrawStringBox(370, 250, 108, 20, "Phil Crump M0DNY", font_ui2, Black, justifyLeft);
+  screen_dashboard_drawall(true);
 
   createKeyboard();
 
@@ -533,49 +1385,7 @@ THD_FUNCTION(screen_service_thread, arg)
   {
     if(screen_state == SCREEN_STATE_DASHBOARD)
     {
-      screen_dashboard_elevation_draw(false);
-
-      screen_dashboard_azimuth_draw(false);
-
-      if(screen_ip_link_status != app_ip_link_status())
-      {
-        /* Update IP Link Status */
-        screen_ip_link_status = app_ip_link_status();
-
-        if(screen_ip_link_status == APP_IP_LINK_STATUS_DOWN)
-        {
-          screen_draw_ethernet_down();
-        }
-        else if(screen_ip_link_status == APP_IP_LINK_STATUS_UPBUTNOIP)
-        {
-          screen_draw_ethernet_warn();
-        }
-        else if(screen_ip_link_status == APP_IP_LINK_STATUS_BOUND)
-        {
-          screen_draw_ethernet_up();
-        }
-      }
-
-
-      if(screen_app_ip_service_sntp_status != app_ip_service_sntp_status())
-      {
-        /* Update SNTP app status */
-        screen_app_ip_service_sntp_status = app_ip_service_sntp_status();
-
-        if(screen_app_ip_service_sntp_status == APP_IP_SERVICE_SNTP_STATUS_DOWN)
-        {
-          screen_draw_clock_down();
-        }
-        else if(screen_app_ip_service_sntp_status == APP_IP_SERVICE_SNTP_STATUS_POLLING)
-        {
-          screen_draw_clock_polling();
-        }
-        else if(screen_app_ip_service_sntp_status == APP_IP_SERVICE_SNTP_STATUS_SYNCED)
-        {
-          screen_draw_clock_up();
-        }
-      }
-      gwinSetText(screen_data_clock, screen_clock_string(), false);
+      screen_dashboard_drawall(false);
     }
 
     // Get an Event or wait 20 milliseconds
@@ -626,11 +1436,7 @@ THD_FUNCTION(screen_service_thread, arg)
             gwinHide(ghKeyboard);
 
             screen_state = SCREEN_STATE_DASHBOARD;
-
-            screen_dashboard_elevation_draw(true);
-            screen_dashboard_azimuth_draw(true);
-            /* Grey divider */
-            gdispDrawLine(20, 105, 460, 105, HTML2COLOR(0xC0C0C0));
+            screen_dashboard_drawall(true);
           }
           else if(pk->c[i] == 'S')
           {
@@ -653,11 +1459,7 @@ THD_FUNCTION(screen_service_thread, arg)
             gwinHide(ghKeyboard);
 
             screen_state = SCREEN_STATE_DASHBOARD;
-
-            screen_dashboard_elevation_draw(true);
-            screen_dashboard_azimuth_draw(true);
-            /* Grey divider */
-            gdispDrawLine(20, 105, 460, 105, HTML2COLOR(0xC0C0C0));
+            screen_dashboard_drawall(true);
           }
           else
           {
@@ -675,11 +1477,7 @@ THD_FUNCTION(screen_service_thread, arg)
               gwinHide(ghKeyboard);
 
               screen_state = SCREEN_STATE_DASHBOARD;
-
-              screen_dashboard_elevation_draw(true);
-              screen_dashboard_azimuth_draw(true);
-              /* Grey divider */
-              gdispDrawLine(20, 105, 460, 105, HTML2COLOR(0xC0C0C0));
+              screen_dashboard_drawall(true);
             }
           }
         }

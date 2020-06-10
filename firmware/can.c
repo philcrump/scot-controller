@@ -79,23 +79,119 @@ static void can_rx_process(CANRxFrame *message)
   {
     if(message->SID == 0x010 && message->DLC == 3)
     {
-      /* Azimuth Resolver Position & Fault Message */
-      azimuth_raw = ((uint16_t)message->data8[0] << 8) | (uint16_t)message->data8[1];
-      azimuth_fault_raw = message->data8[3];
+      /* Elevation Resolver Position & Fault Message */
+      elevation_raw = message->data16[0];
+      elevation_fault_raw = message->data8[3];
+
+      if(elevation_fault_raw != 0x00)
+      {
+        device_elresolver = DEVICE_FAULT;
+      }
+      else
+      {
+        device_elresolver = DEVICE_OK;
+      }
     }
     else if(message->SID == 0x013 && message->DLC == 8)
     {
-      /* Azimuth Resolver Sysinfo Message */
+      /* Elevation Resolver Sysinfo Message */
+    }
+    else if(message->SID == 0x014 && message->DLC == 8)
+    {
+      /* Elevation Motor Info Message */
+      uint32_t elevation_motorfault;
+      uint32_t elevation_motorcontrol;
+
+      elevation_pwm = message->data16[0];
+      elevation_current = message->data16[2];
+      el_limit_1 = (message->data8[7] >> 7) & 0x01;
+      el_limit_2 = (message->data8[7] >> 6) & 0x01;
+      elevation_motorfault = (message->data8[7] >> 5) & 0x01;
+      elevation_motorcontrol = (message->data8[7] >> 4) & 0x01;
+
+      /* Derive ESTOP status */
+      if((el_limit_1 == 1) && (el_limit_2 == 1))
+      {
+        estop = ESTOP_HALT;
+      }
+      else
+      {
+        estop = ESTOP_OK;
+      }
+
+      /* Derive Device Status */
+      if(elevation_motorfault == 0x01)
+      {
+        device_elmotor = DEVICE_FAULT;
+      }
+      else if(elevation_motorcontrol == 0x00)
+      {
+        /* Motor Control inhibited */
+        device_elmotor = DEVICE_INACTIVE;
+      }
+      else
+      {
+        device_elmotor = DEVICE_OK;
+      }
     }
     else if(message->SID == 0x020 && message->DLC == 3)
     {
-      /* Elevation Resolver Position & Fault Message */
-      elevation_raw = ((uint16_t)message->data8[0] << 8) | (uint16_t)message->data8[1];
-      elevation_fault_raw = message->data8[3];
+      /* Azimuth Resolver Position & Fault Message */
+      azimuth_raw = message->data16[0];
+      azimuth_fault_raw = message->data8[3];
+
+      if(azimuth_fault_raw != 0x00)
+      {
+        device_azresolver = DEVICE_FAULT;
+      }
+      else
+      {
+        device_azresolver = DEVICE_OK;
+      }
     }
     else if(message->SID == 0x023 && message->DLC == 8)
     {
-      /* Elevation Resolver Sysinfo Message */
+      /* Azimuth Resolver Sysinfo Message */
+    }
+    else if(message->SID == 0x024 && message->DLC == 8)
+    {
+      /* Azimuth Motor Info Message */
+
+      uint32_t azimuth_motorfault;
+      uint32_t azimuth_motorcontrol;
+      uint32_t _az_limit_1, _az_limit_2;
+
+      azimuth_pwm = message->data16[0];
+      azimuth_current = message->data16[2];
+      _az_limit_1 = (message->data8[7] >> 7) & 0x01;
+      _az_limit_2 = (message->data8[7] >> 6) & 0x01;
+      azimuth_motorfault = (message->data8[7] >> 5) & 0x01;
+      azimuth_motorcontrol = (message->data8[7] >> 4) & 0x01;
+
+      /* Derive ESTOP status */
+      if((_az_limit_1 == 1) && (_az_limit_2 == 1))
+      {
+        estop = ESTOP_HALT;
+      }
+      else
+      {
+        estop = ESTOP_OK;
+      }
+
+      /* Derive Device Status */
+      if(azimuth_motorfault == 0x01)
+      {
+        device_azmotor = DEVICE_FAULT;
+      }
+      else if(azimuth_motorcontrol == 0x00)
+      {
+        /* Motor Control inhibited */
+        device_azmotor = DEVICE_INACTIVE;
+      }
+      else
+      {
+        device_azmotor = DEVICE_OK;
+      }
     }
 
     ip_send_canmessage(message);

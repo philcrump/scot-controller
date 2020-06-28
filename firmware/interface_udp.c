@@ -237,15 +237,22 @@ static void _udp_rx_cb(void *arg, struct udp_pcb *upcb, struct pbuf *p, const st
   (void)addr;
   (void)port;
   
-  /* Length Limits */
-  if(p->len < 5 || p-> len > 64)
+  if(p == NULL)
   {
+    return;
+  }
+
+  /* Length Limits */
+  if(p->len < 5 || p->len > 64)
+  {
+    pbuf_free(p);
     return;
   }
 
   /* Check Magic string */
   if(memcmp(p->payload, udp_rx_magic, 4) != 0)
   {
+    pbuf_free(p);
     return;
   }
 

@@ -123,12 +123,12 @@
 //    #define GDISP_INCLUDE_FONT_DEJAVUSANSBOLD12_AA   GFXOFF
 //    #define GDISP_INCLUDE_USER_FONTS                 GFXOFF
 
-#define GDISP_NEED_IMAGE                             GFXON
+//#define GDISP_NEED_IMAGE                             GFXOFF
 //    #define GDISP_NEED_IMAGE_NATIVE                  GFXOFF
 //    #define GDISP_NEED_IMAGE_GIF                     GFXOFF
 //        #define GDISP_IMAGE_GIF_BLIT_BUFFER_SIZE     32
-    #define GDISP_NEED_IMAGE_BMP                     GFXON
-        #define GDISP_NEED_IMAGE_BMP_1               GFXON
+//    #define GDISP_NEED_IMAGE_BMP                     GFXON
+//        #define GDISP_NEED_IMAGE_BMP_1               GFXON
 //        #define GDISP_NEED_IMAGE_BMP_4               GFXON
 //        #define GDISP_NEED_IMAGE_BMP_4_RLE           GFXON
 //        #define GDISP_NEED_IMAGE_BMP_8               GFXON
@@ -227,7 +227,7 @@
 //        #define GWIN_SLIDER_DEAD_BAND                5
 //        #define GWIN_SLIDER_TOGGLE_INC               20
 //    #define GWIN_NEED_CHECKBOX                       GFXOFF
-    #define GWIN_NEED_IMAGE                          GFXON
+//    #define GWIN_NEED_IMAGE                          GFXOFF
 //        #define GWIN_NEED_IMAGE_ANIMATION            GFXOFF
 //    #define GWIN_NEED_RADIO                          GFXOFF
 //    #define GWIN_NEED_LIST                           GFXOFF
@@ -315,7 +315,7 @@
 ///////////////////////////////////////////////////////////////////////////
 // GFILE                                                                 //
 ///////////////////////////////////////////////////////////////////////////
-#define GFX_USE_GFILE                                GFXON
+//#define GFX_USE_GFILE                                GFXOFF
 
 //#define GFILE_NEED_PRINTG                            GFXOFF
 //#define GFILE_NEED_SCANG                             GFXOFF
@@ -325,7 +325,7 @@
 //#define GFILE_NEED_NOAUTOMOUNT                       GFXOFF
 //#define GFILE_NEED_NOAUTOSYNC                        GFXOFF
 
-#define GFILE_NEED_MEMFS                             GFXON
+//#define GFILE_NEED_MEMFS                             GFXOFF
 //#define GFILE_NEED_ROMFS                             GFXOFF
 //#define GFILE_NEED_RAMFS                             GFXOFF
 //#define GFILE_NEED_FATFS                             GFXOFF
@@ -335,7 +335,7 @@
 
 //#define GFILE_ALLOW_FLOATS                           GFXOFF
 //#define GFILE_ALLOW_DEVICESPECIFIC                   GFXOFF
-#define GFILE_MAX_GFILES                             6
+//#define GFILE_MAX_GFILES                             6
 
 ///////////////////////////////////////////////////////////////////////////
 // GADC                                                                  //

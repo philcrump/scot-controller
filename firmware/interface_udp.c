@@ -1,56 +1,15 @@
 #include "main.h"
 
-#include <lwip/dhcp.h>
 #include <lwip/tcpip.h>
+#include <lwip/udp.h>
 #include <lwip/apps/sntp.h>
 
 #include <string.h>
-
-static struct netif* _ip_netif_ptr = NULL;
-
-static bool _ip_link_is_up = false;
 
 // eshail.batc.org.uk - 185.83.169.27
 static const ip_addr_t ipaddr_ntp_goonhilly = {
   .addr = (27 << 24) | (169 << 16) | (83 << 8) | (185)
 };
-
-uint32_t app_ip_link_status(void)
-{
-  if(_ip_link_is_up && _ip_netif_ptr != NULL)
-  {
-    if(netif_dhcp_data(_ip_netif_ptr)->state == 10) // DHCP_STATE_BOUND = 10
-    {
-      return APP_IP_LINK_STATUS_BOUND;
-    }
-    else
-    {
-      return APP_IP_LINK_STATUS_UPBUTNOIP;
-    }
-  }
-  else
-  {
-    return APP_IP_LINK_STATUS_DOWN;
-  }
-}
-
-void ip_link_up_cb(void *p)
-{
-  _ip_netif_ptr = (struct netif*)p;
-
-  dhcp_start(_ip_netif_ptr);
-
-  _ip_link_is_up = true;
-}
-
-void ip_link_down_cb(void *p)
-{
-  _ip_netif_ptr = (struct netif*)p;
-
-  dhcp_stop(_ip_netif_ptr);
-
-  _ip_link_is_up = false;
-}
 
 static void _user_ip_sntp_start(void *arg)
 {
@@ -79,24 +38,21 @@ THD_FUNCTION(user_ip_services_thread, arg)
 
   while(true)
   {
-    if(_ip_netif_ptr != NULL)
+    if(!_user_ip_services_running
+        && app_ip_link_status() == APP_IP_LINK_STATUS_BOUND)
     {
-      if(!_user_ip_services_running
-          && app_ip_link_status() == APP_IP_LINK_STATUS_BOUND)
-      {
-        /* Start Services */
-        tcpip_callback(_user_ip_sntp_start, NULL);
+      /* Start Services */
+      tcpip_callback(_user_ip_sntp_start, NULL);
 
-        _user_ip_services_running = true;
-      }
-      else if(_user_ip_services_running
-          && app_ip_link_status() != APP_IP_LINK_STATUS_BOUND)
-      {
-        /* Stop Services */
-        tcpip_callback(_user_ip_sntp_stop, NULL);
+      _user_ip_services_running = true;
+    }
+    else if(_user_ip_services_running
+        && app_ip_link_status() != APP_IP_LINK_STATUS_BOUND)
+    {
+      /* Stop Services */
+      tcpip_callback(_user_ip_sntp_stop, NULL);
 
-        _user_ip_services_running = false;
-      }
+      _user_ip_services_running = false;
     }
     watchdog_feed(WATCHDOG_DOG_USERIPSRVS);
     chThdSleepMilliseconds(100);
@@ -127,7 +83,9 @@ uint32_t app_ip_service_sntp_status(void)
 
 typedef struct {
   bool waiting;
+  bool isCAN;
   CANRxFrame canFrame;
+  uint8_t rawFrame[12];
   mutex_t mutex;
   condition_variable_t condition;
 } udp_tx_queue_t;
@@ -182,14 +140,22 @@ THD_FUNCTION(udp_tx_service_thread, arg)
       }
     }
 
-    *(uint32_t *)(&_udp_pbuf_payload_ptr[4]) = udp_tx_queue.canFrame.SID;
-    _udp_pbuf_payload_ptr[8] = udp_tx_queue.canFrame.DLC;
-    memcpy(&(_udp_pbuf_payload_ptr[9]), udp_tx_queue.canFrame.data8, 8);
+    if(udp_tx_queue.isCAN)
+    {
+      *(uint32_t *)(&_udp_pbuf_payload_ptr[4]) = udp_tx_queue.canFrame.SID;
+      _udp_pbuf_payload_ptr[8] = udp_tx_queue.canFrame.DLC;
+      memcpy(&(_udp_pbuf_payload_ptr[9]), udp_tx_queue.canFrame.data8, 8);
+    }
+    else
+    {
+      _udp_pbuf_payload_ptr[4] = 0xFF;
+      memcpy(&(_udp_pbuf_payload_ptr[5]), udp_tx_queue.rawFrame, 12);
+    }
 
     udp_tx_queue.waiting = false;
     chMtxUnlock(&udp_tx_queue.mutex);
 
-    if(!_ip_link_is_up)
+    if(app_ip_link_status() != APP_IP_LINK_STATUS_BOUND)
     {
       /* Discard packet */
       continue;
@@ -207,6 +173,20 @@ void ip_send_canmessage(CANRxFrame *message_ptr)
   chMtxLock(&udp_tx_queue.mutex);
 
   memcpy(&(udp_tx_queue.canFrame), message_ptr, sizeof(CANRxFrame));
+  udp_tx_queue.isCAN = true;
+  udp_tx_queue.waiting = true;
+
+  chCondSignal(&udp_tx_queue.condition);
+  chMtxUnlock(&udp_tx_queue.mutex);
+}
+
+void ip_send_joystick(uint32_t az, uint32_t el) /**** DEBUG ****/
+{
+  chMtxLock(&udp_tx_queue.mutex);
+
+  *(uint32_t *)(&(udp_tx_queue.rawFrame[0])) = el;
+  *(uint32_t *)(&(udp_tx_queue.rawFrame[4])) = az;
+  udp_tx_queue.isCAN = false;
   udp_tx_queue.waiting = true;
 
   chCondSignal(&udp_tx_queue.condition);

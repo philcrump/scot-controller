@@ -133,6 +133,7 @@ CSRC = $(ALLCSRC) \
        $(CHIBIOS)/os/various/evtimer.c \
        screen.c \
        can.c \
+       ip_link.c \
        interface_udp.c \
        app_time.c \
        tracking.c \

@@ -26,6 +26,7 @@
 
 #include "screen.h"
 #include "can.h"
+#include "ip_link.h"
 #include "interface_udp.h"
 #include "app_time.h"
 #include "tracking.h"

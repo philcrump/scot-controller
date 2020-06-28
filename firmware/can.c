@@ -72,6 +72,19 @@ void can_send_reset(const uint16_t target_sid)
   canTransmitTimeout(&CAND1, CAN_ANY_MAILBOX, &txmsg, TIME_IMMEDIATE);
 }
 
+void can_send_pwm(const uint16_t target_sid, const int16_t pwm)
+{
+  CANTxFrame txmsg;
+
+  txmsg.IDE = CAN_IDE_STD; // Identifier Type: Standard
+  txmsg.SID = target_sid; // Standard Identifier Value (11bits)
+  txmsg.RTR = CAN_RTR_DATA; // Frame Type
+  txmsg.DLC = 2; // Data Length (max = 8)
+  txmsg.data16[0] = pwm;
+
+  canTransmitTimeout(&CAND1, CAN_ANY_MAILBOX, &txmsg, TIME_IMMEDIATE);
+}
+
 static void can_rx_process(CANRxFrame *message)
 {
   if(message->RTR == CAN_RTR_DATA

@@ -181,7 +181,7 @@ static void widgets_init(void)
   wi.g.x = 355;
   wi.g.y = 10;
   wi.g.width = 30;
-  wi.g.height = 30;
+  wi.g.height = 15;
   wi.text = "C";
   wi.customDraw = NULL;
   wi.g.show = true;
@@ -301,7 +301,7 @@ static void widgets_init(void)
   wi.g.x = 355;
   wi.g.y = 110;
   wi.g.width = 30;
-  wi.g.height = 30;
+  wi.g.height = 15;
   wi.text = "C";
   wi.customDraw = NULL;
   wi.g.show = true;
@@ -527,34 +527,62 @@ void screen_dashboard_elevation_control_draw(bool force_redraw)
     return;
   }
 
+  static color_t l_vel_color;
   static color_t l_pos_color;
   static color_t r_pos_color;
   static color_t r_mot_color;
 
-  if(control_elevation == CONTROL_LOCAL_POSITION)
+  if(control_elevation == CONTROL_LOCAL_VELOCITY)
   {
+    l_vel_color = Lime;
+    l_pos_color = Grey;
+    r_pos_color = Grey;
+    r_mot_color = Grey;
+  }
+  else if(control_elevation == CONTROL_LOCAL_POSITION)
+  {
+    l_vel_color = Grey;
     l_pos_color = Lime;
     r_pos_color = Grey;
     r_mot_color = Grey;
   }
   else if(control_elevation == CONTROL_REMOTE_POSITION)
   {
+    l_vel_color = Grey;
     l_pos_color = Grey;
     r_pos_color = Lime;
     r_mot_color = Grey;
   }
   else if(control_elevation == CONTROL_REMOTE_MOTOR)
   {
+    l_vel_color = Grey;
     l_pos_color = Grey;
     r_pos_color = Grey;
     r_mot_color = Lime;
   }
-  else // Shouldn't be here, but worth indicating if so
+  else // CONTROL_NONE
   {
+    l_vel_color = Grey;
     l_pos_color = Grey;
     r_pos_color = Grey;
     r_mot_color = Grey;
   }
+
+  /* Local - Vel */
+  gdispFillRoundedBox(
+    350, 25,
+    40, 15,
+    2,
+    l_vel_color
+  );
+  gdispDrawStringBox(
+    350, 25,
+    40, 15,
+    "L-Vel",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
 
   /* Local - Position */
   gdispFillRoundedBox(
@@ -787,34 +815,62 @@ void screen_dashboard_azimuth_control_draw(bool force_redraw)
     return;
   }
 
+  static color_t l_vel_color;
   static color_t l_pos_color;
   static color_t r_pos_color;
   static color_t r_mot_color;
 
-  if(control_azimuth == CONTROL_LOCAL_POSITION)
+  if(control_azimuth == CONTROL_LOCAL_VELOCITY)
   {
+    l_vel_color = Lime;
+    l_pos_color = Grey;
+    r_pos_color = Grey;
+    r_mot_color = Grey;
+  }
+  else if(control_azimuth == CONTROL_LOCAL_POSITION)
+  {
+    l_vel_color = Grey;
     l_pos_color = Lime;
     r_pos_color = Grey;
     r_mot_color = Grey;
   }
   else if(control_azimuth == CONTROL_REMOTE_POSITION)
   {
+    l_vel_color = Grey;
     l_pos_color = Grey;
     r_pos_color = Lime;
     r_mot_color = Grey;
   }
   else if(control_azimuth == CONTROL_REMOTE_MOTOR)
   {
+    l_vel_color = Grey;
     l_pos_color = Grey;
     r_pos_color = Grey;
     r_mot_color = Lime;
   }
-  else // Shouldn't be here, but worth indicating if so
+  else // CONTROL_NONE
   {
+    l_vel_color = Grey;
     l_pos_color = Grey;
     r_pos_color = Grey;
     r_mot_color = Grey;
   }
+
+  /* Local - Vel */
+  gdispFillRoundedBox(
+    350, 125,
+    40, 15,
+    2,
+    l_vel_color
+  );
+  gdispDrawStringBox(
+    350, 125,
+    40, 15,
+    "L-Vel",
+    font_dejavusans12,
+    Black,
+    justifyCenter
+  );
 
   /* Local - Position */
   gdispFillRoundedBox(

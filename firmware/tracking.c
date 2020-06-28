@@ -96,13 +96,108 @@ void tracking_azimuth_set_demand(float new_azimuth_demand_degrees)
   }
 }
 
+/*** JOYSTICK ADC ***/
+
+#define JOYSTICK_ADC_CHANNELS         2
+#define JOYSTICK_ADC_BUFFER_DEPTH     1024
+static adcsample_t joystick_adc_samples[JOYSTICK_ADC_CHANNELS * JOYSTICK_ADC_BUFFER_DEPTH];
+
+uint32_t joystick_adc_elevation = 0x7FF/2;
+uint32_t joystick_adc_azimuth = 0x7FF/2;
+
+static void joystick_adc_callback(ADCDriver *adcp)
+{
+  uint32_t i, j;
+  uint32_t elevationSum = 0;
+  uint32_t azimuthSum = 0;
+
+  if(adcIsBufferComplete(adcp))
+  {
+    j = JOYSTICK_ADC_BUFFER_DEPTH / 2;
+  }
+  else
+  {
+    j = 0;
+  }
+
+  for(i = 0; i < JOYSTICK_ADC_BUFFER_DEPTH / 2; i+=2)
+  {
+    elevationSum += joystick_adc_samples[i+j];
+    azimuthSum += joystick_adc_samples[i+j+1];
+  }
+
+  joystick_adc_elevation = elevationSum / (JOYSTICK_ADC_BUFFER_DEPTH / 2);
+  joystick_adc_azimuth = azimuthSum / (JOYSTICK_ADC_BUFFER_DEPTH / 2);
+}
+
+static const ADCConversionGroup joystick_adc_cfg = {
+  TRUE,                     //circular buffer mode
+  JOYSTICK_ADC_CHANNELS,    //Number of the analog channels
+  joystick_adc_callback,              //Callback function
+  NULL,         //Error callback
+  0,                        /* CR1 */
+  ADC_CR2_SWSTART,          /* CR2 */
+  0,
+  ADC_SMPR2_SMP_AN8(ADC_SAMPLE_480) | ADC_SMPR2_SMP_AN7(ADC_SAMPLE_480),
+  0,
+  0,
+  ADC_SQR1_NUM_CH(JOYSTICK_ADC_CHANNELS),
+  0,
+  ADC_SQR3_SQ2_N(ADC_CHANNEL_IN7)   | ADC_SQR3_SQ1_N(ADC_CHANNEL_IN8)
+};
+
+static int16_t adcToPWM(uint16_t adc)
+{
+  if(adc < 0x380)
+  {
+    return -((1024 * (0x380 - adc)) / 0x37F);
+  }
+  else if(adc > 0x480)
+  {
+    return ((1024 * (adc - 0x480)) / 0x37F);
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+extern void ip_send_joystick(uint32_t az, uint32_t el);
+
 THD_FUNCTION(tracking_thread, arg)
 {
   (void)arg;
 
+  control_elevation = CONTROL_NONE;
+  control_azimuth = CONTROL_NONE;
+
+  adcStart(&ADCD3, NULL);
+  adcStartConversion(&ADCD3, &joystick_adc_cfg, joystick_adc_samples, JOYSTICK_ADC_BUFFER_DEPTH);
+
   while(true)
   {
+    /* Joystick Switch Enable */
+    if(!palReadLine(LINE_JOYSTICK_NENABLE))
+    {
+      control_elevation = CONTROL_LOCAL_VELOCITY;
+      control_azimuth = CONTROL_LOCAL_VELOCITY;
+    }
+    else
+    {
+      control_elevation = CONTROL_NONE;
+      control_azimuth = CONTROL_NONE;
+    }
+
     tracking_recalculate();
+
+    /* Elevation Control Loop */
+    if(control_elevation == CONTROL_LOCAL_VELOCITY)
+    {
+      /* Read Joystick Value */
+      can_send_pwm(0x01B, adcToPWM(joystick_adc_elevation));
+      can_send_pwm(0x02B, adcToPWM(joystick_adc_azimuth));
+    }
+    //ip_send_joystick(joystick_adc_elevation, joystick_adc_azimuth);
 
     watchdog_feed(WATCHDOG_DOG_TRACKING);
     chThdSleepMilliseconds(10);

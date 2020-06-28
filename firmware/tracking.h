@@ -47,6 +47,8 @@ typedef enum {
 extern estop_t estop;
 
 typedef enum {
+    CONTROL_NONE,
+    CONTROL_LOCAL_VELOCITY,
     CONTROL_LOCAL_POSITION,
     CONTROL_REMOTE_POSITION,
     CONTROL_REMOTE_MOTOR

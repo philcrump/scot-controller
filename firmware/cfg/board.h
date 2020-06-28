@@ -266,7 +266,7 @@
 /*
  * IO lines assignments.
  */
-#define LINE_ARD_A0                 PAL_LINE(GPIOA, 0U)
+#define LINE_JOYSTICK_NENABLE       PAL_LINE(GPIOA, 0U)
 #define LINE_RMII_REF_CLK           PAL_LINE(GPIOA, 1U)
 #define LINE_RMII_MDIO              PAL_LINE(GPIOA, 2U)
 #define LINE_ULPI_D0                PAL_LINE(GPIOA, 3U)
@@ -525,7 +525,7 @@
                                      PIN_OTYPE_PUSHPULL(GPIOA_SWDIO) |      \
                                      PIN_OTYPE_PUSHPULL(GPIOA_SWCLK) |      \
                                      PIN_OTYPE_PUSHPULL(GPIOA_ARD_D9))
-#define VAL_GPIOA_OSPEEDR           (PIN_OSPEED_HIGH(GPIOA_ARD_A0) |        \
+#define VAL_GPIOA_OSPEEDR           (PIN_OSPEED_VERYLOW(GPIOA_ARD_A0) |        \
                                      PIN_OSPEED_HIGH(GPIOA_RMII_REF_CLK) |  \
                                      PIN_OSPEED_HIGH(GPIOA_RMII_MDIO) |     \
                                      PIN_OSPEED_HIGH(GPIOA_ULPI_D0) |       \
@@ -1087,8 +1087,8 @@
                                      PIN_MODE_INPUT(GPIOF_ARD_A5) |         \
                                      PIN_MODE_INPUT(GPIOF_ARD_A4) |         \
                                      PIN_MODE_INPUT(GPIOF_ARD_A3) |         \
-                                     PIN_MODE_INPUT(GPIOF_ARD_A2) |         \
-                                     PIN_MODE_INPUT(GPIOF_ARD_A1) |         \
+                                     PIN_MODE_ANALOG(GPIOF_ARD_A2) |         \
+                                     PIN_MODE_ANALOG(GPIOF_ARD_A1) |         \
                                      PIN_MODE_ALTERNATE(GPIOF_FMC_SDNRAS) | \
                                      PIN_MODE_ALTERNATE(GPIOF_FMC_A6) |     \
                                      PIN_MODE_ALTERNATE(GPIOF_FMC_A7) |     \
@@ -1135,8 +1135,8 @@
                                      PIN_PUPDR_PULLUP(GPIOF_ARD_A5) |       \
                                      PIN_PUPDR_PULLUP(GPIOF_ARD_A4) |       \
                                      PIN_PUPDR_PULLUP(GPIOF_ARD_A3) |       \
-                                     PIN_PUPDR_PULLUP(GPIOF_ARD_A2) |       \
-                                     PIN_PUPDR_PULLUP(GPIOF_ARD_A1) |       \
+                                     PIN_PUPDR_FLOATING(GPIOF_ARD_A2) |       \
+                                     PIN_PUPDR_FLOATING(GPIOF_ARD_A1) |       \
                                      PIN_PUPDR_FLOATING(GPIOF_FMC_SDNRAS) | \
                                      PIN_PUPDR_FLOATING(GPIOF_FMC_A6) |     \
                                      PIN_PUPDR_FLOATING(GPIOF_FMC_A7) |     \

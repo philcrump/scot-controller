@@ -1,7 +1,5 @@
 #include "main.h"
 
-#include <math.h>
-
 #include "lwipthread.h"
 
 static THD_WORKING_AREA(watchdog_service_wa, 128);

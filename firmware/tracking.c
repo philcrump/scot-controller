@@ -194,10 +194,12 @@ THD_FUNCTION(tracking_thread, arg)
     if(control_elevation == CONTROL_LOCAL_VELOCITY)
     {
       /* Read Joystick Value */
-      can_send_pwm(0x01B, adcToPWM(joystick_adc_elevation));
-      can_send_pwm(0x02B, adcToPWM(joystick_adc_azimuth));
+      can_send_pwm_elevation(adcToPWM(joystick_adc_elevation));
     }
-    //ip_send_joystick(joystick_adc_elevation, joystick_adc_azimuth);
+    if(control_azimuth == CONTROL_LOCAL_VELOCITY)
+    {
+      can_send_pwm_azimuth(adcToPWM(joystick_adc_azimuth));
+    }
 
     watchdog_feed(WATCHDOG_DOG_TRACKING);
     chThdSleepMilliseconds(10);

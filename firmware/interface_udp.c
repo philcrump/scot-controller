@@ -7,7 +7,7 @@
 #include <string.h>
 
 // eshail.batc.org.uk - 185.83.169.27
-static const ip_addr_t ipaddr_ntp_goonhilly = {
+static const ip_addr_t ipaddr_ntp_amsatghy = {
   .addr = (27 << 24) | (169 << 16) | (83 << 8) | (185)
 };
 
@@ -15,10 +15,11 @@ static void _user_ip_sntp_start(void *arg)
 {
   (void)arg;
 
-  /* Set Primary server (can be overwritten by DNS) */
-  sntp_setserver(0, &ipaddr_ntp_goonhilly);
+  /* Set Primary server (can be overwritten by DHCP) */
+  sntp_setserver(0, &ipaddr_ntp_amsatghy);
   /* Also set as fallback after DHCP-populated servers */
-  sntp_setserver(2, &ipaddr_ntp_goonhilly);
+  sntp_setserver(2, &ipaddr_ntp_amsatghy);
+
   sntp_init();
 }
 
@@ -97,6 +98,8 @@ static udp_tx_queue_t udp_tx_queue =
   .condition = _CONDVAR_DATA(udp_tx_queue.condition)
 };
 
+ip_addr_t remote_ip_addr;
+
 static struct udp_pcb *_udp_tx_pcb_ptr = NULL;
 static struct pbuf *_udp_pbuf_ptr;
 
@@ -109,7 +112,7 @@ static void _udp_tx(void *arg)
     _udp_tx_pcb_ptr = udp_new();
   }
 
-  udp_sendto(_udp_tx_pcb_ptr, _udp_pbuf_ptr, IP_ADDR_BROADCAST, 11234);
+  udp_sendto(_udp_tx_pcb_ptr, _udp_pbuf_ptr, &remote_ip_addr, 11234);
 }
 
 THD_FUNCTION(udp_tx_service_thread, arg)
@@ -120,6 +123,8 @@ THD_FUNCTION(udp_tx_service_thread, arg)
 
   uint8_t *_udp_pbuf_payload_ptr;
   RTCDateTime _datetime;
+
+  remote_ip_addr.addr = 0;
 
   _udp_pbuf_ptr = pbuf_alloc(PBUF_TRANSPORT, (4+4+1+8), PBUF_REF);
   _udp_pbuf_payload_ptr = (uint8_t *)_udp_pbuf_ptr->payload;
@@ -155,7 +160,8 @@ THD_FUNCTION(udp_tx_service_thread, arg)
     udp_tx_queue.waiting = false;
     chMtxUnlock(&udp_tx_queue.mutex);
 
-    if(app_ip_link_status() != APP_IP_LINK_STATUS_BOUND)
+    if(app_ip_link_status() != APP_IP_LINK_STATUS_BOUND
+      || remote_ip_addr.addr == 0)
     {
       /* Discard packet */
       continue;
